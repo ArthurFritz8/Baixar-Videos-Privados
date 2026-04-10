@@ -84,7 +84,6 @@ Use somente para conteudos com autorizacao legitima do titular e em conformidade
 
 - `REQUESTER_RATE_LIMIT_MAX_REQUESTS=12` com `REQUESTER_RATE_LIMIT_WINDOW_SECONDS=60`.
 - `DOWNLOAD_FILE_TOKEN_TTL_SECONDS=120`.
-- `ALLOWED_SOURCE_HOSTS` predefinido com hosts sociais comuns e localhost.
 - Para uso real com links privados (Panda/Hotmart/CDN), adicione explicitamente os dominios do seu ambiente em `ALLOWED_SOURCE_HOSTS`.
 
 ## Download Real por URL Autorizada
