@@ -1,0 +1,49 @@
+from dataclasses import dataclass
+
+
+@dataclass
+class AppError(Exception):
+    code: str
+    public_message: str
+    status_code: int
+    internal_detail: str | None = None
+
+
+class DownloadFailureError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_FAILED",
+            public_message=public_message,
+            status_code=400,
+            internal_detail=internal_detail,
+        )
+
+
+class AuthorizationDeniedError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="AUTHORIZATION_DENIED",
+            public_message=public_message,
+            status_code=403,
+            internal_detail=internal_detail,
+        )
+
+
+class ProviderUnavailableError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="PROVIDER_UNAVAILABLE",
+            public_message=public_message,
+            status_code=502,
+            internal_detail=internal_detail,
+        )
+
+
+class ProviderNotSupportedError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="PROVIDER_NOT_SUPPORTED",
+            public_message=public_message,
+            status_code=400,
+            internal_detail=internal_detail,
+        )
