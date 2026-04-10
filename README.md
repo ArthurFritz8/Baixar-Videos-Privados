@@ -50,8 +50,15 @@ Use somente para conteudos com autorizacao legitima do titular e em conformidade
 3. O script envia para API, acompanha status e baixa o arquivo final no diretorio atual.
 
 Observacao:
-- Detectar automaticamente a aba aberta no navegador nao e suportado por este projeto sem extensao/integração especifica do navegador.
-- O fluxo suportado oficialmente e informar o link no CMD.
+- Tambem ha suporte via extensao para Chrome/Edge (aba ativa).
+
+### Integracao Chrome/Edge
+
+1. Carregue a extensao em modo desenvolvedor a partir de `integrations/browser-extension`.
+2. Configure `API Base`, `API Prefix`, `Header API Key` e `API Key` no popup.
+3. Abra a pagina com o video/link autorizado e clique em `Baixar Aba Atual`.
+
+Guia detalhado: `integrations/browser-extension/README.md`.
 
 ## Endpoints
 

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Baixar Video Panda Connector",
+  "version": "1.0.0",
+  "description": "Integra a aba ativa do Chrome/Edge com a API local para baixar videos autorizados.",
+  "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "downloads"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://127.0.0.1/*",
+    "https://localhost/*"
+  ],
+  "action": {
+    "default_title": "Baixar Video",
+    "default_popup": "popup.html"
+  }
+}

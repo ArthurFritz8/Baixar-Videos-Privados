@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baixar Video</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Baixar Video</h1>
+      <p class="subtitle">Integracao Chrome/Edge para enviar a aba ativa para a API.</p>
+
+      <label>
+        API Base
+        <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
+      </label>
+
+      <label>
+        API Prefix
+        <input id="apiPrefix" type="text" value="/api/v1" />
+      </label>
+
+      <label>
+        Header API Key
+        <input id="apiKeyHeaderName" type="text" value="X-API-Key" />
+      </label>
+
+      <label>
+        API Key
+        <input id="apiKey" type="password" placeholder="Cole sua API_KEY do .env" />
+      </label>
+
+      <label>
+        Requester ID
+        <input id="requesterId" type="text" value="browser-user" />
+      </label>
+
+      <label>
+        Provider
+        <select id="providerOverride">
+          <option value="auto">auto (inferir por dominio)</option>
+          <option value="panda_video">panda_video</option>
+          <option value="hotmart">hotmart</option>
+          <option value="youtube">youtube</option>
+          <option value="instagram">instagram</option>
+          <option value="tiktok">tiktok</option>
+          <option value="facebook">facebook</option>
+          <option value="x">x</option>
+          <option value="vimeo">vimeo</option>
+        </select>
+      </label>
+
+      <label>
+        Qualidade
+        <select id="qualityPreference">
+          <option value="best">best</option>
+          <option value="high">high</option>
+          <option value="medium">medium</option>
+          <option value="low">low</option>
+          <option value="audio">audio</option>
+        </select>
+      </label>
+
+      <div class="grid-two">
+        <label>
+          Poll (seg)
+          <input id="pollIntervalSeconds" type="number" min="0.2" step="0.1" value="1.0" />
+        </label>
+
+        <label>
+          Timeout (seg)
+          <input id="maxWaitSeconds" type="number" min="10" step="1" value="300" />
+        </label>
+      </div>
+
+      <label class="checkbox">
+        <input id="saveAs" type="checkbox" checked />
+        Mostrar dialogo de salvar arquivo
+      </label>
+
+      <div class="actions">
+        <button id="saveBtn" type="button" class="secondary">Salvar Config</button>
+        <button id="downloadBtn" type="button" class="primary">Baixar Aba Atual</button>
+      </div>
+
+      <p id="activeTabUrl" class="tab-url">Aba atual: carregando...</p>
+      <pre id="status" class="status" aria-live="polite"></pre>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
