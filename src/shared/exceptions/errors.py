@@ -39,6 +39,26 @@ class ProviderUnavailableError(AppError):
         )
 
 
+class ProviderTimeoutError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="PROVIDER_TIMEOUT",
+            public_message=public_message,
+            status_code=504,
+            internal_detail=internal_detail,
+        )
+
+
+class ProviderContractViolationError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="PROVIDER_CONTRACT_VIOLATION",
+            public_message=public_message,
+            status_code=502,
+            internal_detail=internal_detail,
+        )
+
+
 class ProviderNotSupportedError(AppError):
     def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
         super().__init__(
@@ -55,5 +75,15 @@ class DownloadNotFoundError(AppError):
             code="DOWNLOAD_NOT_FOUND",
             public_message=public_message,
             status_code=404,
+            internal_detail=internal_detail,
+        )
+
+
+class DownloadCancellationNotAllowedError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_CANCELLATION_NOT_ALLOWED",
+            public_message=public_message,
+            status_code=409,
             internal_detail=internal_detail,
         )

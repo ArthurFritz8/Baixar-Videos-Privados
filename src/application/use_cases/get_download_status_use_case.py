@@ -43,6 +43,17 @@ class GetDownloadStatusUseCase:
                 artifact_location=job.artifact_location,
             )
 
+        if job.queue_status == "canceled":
+            return DownloadStatusResponse(
+                success=True,
+                message="Download cancelado.",
+                provider=job.provider,
+                download_id=job.download_id,
+                queue_status=job.queue_status,
+                artifact_location=job.artifact_location,
+                code=job.error_code,
+            )
+
         return DownloadStatusResponse(
             success=True,
             message="Download em processamento.",

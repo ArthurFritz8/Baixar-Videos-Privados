@@ -2,7 +2,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from typing import Literal
 
-QueueStatus = Literal["queued", "processing", "completed", "failed"]
+QueueStatus = Literal["queued", "processing", "completed", "failed", "canceled"]
 
 
 def _utc_now() -> datetime:
@@ -70,5 +70,13 @@ class DownloadJob:
             queue_status="failed",
             error_code=error_code,
             attempt_count=attempt_count,
+            updated_at=_utc_now(),
+        )
+
+    def to_canceled(self, error_code: str) -> "DownloadJob":
+        return replace(
+            self,
+            queue_status="canceled",
+            error_code=error_code,
             updated_at=_utc_now(),
         )

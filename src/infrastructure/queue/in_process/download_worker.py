@@ -1,8 +1,8 @@
 import asyncio
 
+from src.application.ports.download_queue_port import DownloadQueuePort
 from src.application.use_cases.process_download_job_use_case import ProcessDownloadJobUseCase
 from src.infrastructure.observability.logger import get_logger
-from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 
 logger = get_logger(__name__)
 
@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 class InProcessDownloadWorker:
     def __init__(
         self,
-        download_queue: InProcessDownloadQueue,
+        download_queue: DownloadQueuePort,
         process_download_job_use_case: ProcessDownloadJobUseCase,
         worker_concurrency: int,
     ) -> None:
@@ -42,6 +42,8 @@ class InProcessDownloadWorker:
             download_id = ""
             try:
                 download_id = await self._download_queue.dequeue()
+                if download_id is None:
+                    continue
                 await self._process_download_job_use_case.execute(download_id)
             except asyncio.CancelledError:
                 break

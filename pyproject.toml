@@ -16,6 +16,9 @@ dependencies = [
 dev = [
   "pytest>=8.3.0",
 ]
+redis = [
+  "redis>=5.0.0",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

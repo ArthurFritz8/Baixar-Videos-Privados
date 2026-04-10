@@ -29,7 +29,7 @@ class InMemoryDownloadJobRepository:
             if job is None:
                 return None
 
-            if job.queue_status in ("completed", "failed"):
+            if job.queue_status in ("completed", "failed", "canceled"):
                 return replace(job)
 
             updated = job.to_processing()
@@ -66,5 +66,18 @@ class InMemoryDownloadJobRepository:
                 return None
 
             updated = job.to_failed(error_code=error_code, attempt_count=attempt_count)
+            self._jobs[download_id] = updated
+            return replace(updated)
+
+    def mark_canceled(self, download_id: str, error_code: str) -> DownloadJob | None:
+        with self._lock:
+            job = self._jobs.get(download_id)
+            if job is None:
+                return None
+
+            if job.queue_status in ("completed", "failed", "canceled", "processing"):
+                return replace(job)
+
+            updated = job.to_canceled(error_code=error_code)
             self._jobs[download_id] = updated
             return replace(updated)

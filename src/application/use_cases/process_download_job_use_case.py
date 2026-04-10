@@ -27,7 +27,7 @@ class ProcessDownloadJobUseCase:
         job = self._download_job_repository.mark_processing(download_id)
         if job is None:
             return
-        if job.queue_status in ("completed", "failed"):
+        if job.queue_status in ("completed", "failed", "canceled"):
             return
 
         provider = self._provider_registry.get(
@@ -55,7 +55,8 @@ class ProcessDownloadJobUseCase:
                 )
                 return
             except AppError as exc:
-                if attempt >= self._retry_max_attempts:
+                should_retry = exc.code in ("PROVIDER_TIMEOUT", "PROVIDER_UNAVAILABLE")
+                if (not should_retry) or (attempt >= self._retry_max_attempts):
                     self._download_job_repository.mark_failed(
                         download_id=download_id,
                         error_code=exc.code,

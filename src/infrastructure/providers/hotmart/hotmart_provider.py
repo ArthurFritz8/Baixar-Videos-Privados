@@ -1,13 +1,17 @@
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from src.application.ports.provider_port import (
     ProviderDownloadRequest,
     ProviderDownloadResult,
     ProviderPort,
 )
-from src.shared.exceptions.errors import ProviderUnavailableError
+from src.shared.exceptions.errors import (
+    ProviderContractViolationError,
+    ProviderTimeoutError,
+    ProviderUnavailableError,
+)
 
 
 class HotmartTicketPayload(BaseModel):
@@ -27,18 +31,37 @@ class HotmartProvider(ProviderPort):
     async def request_download_ticket(
         self, request: ProviderDownloadRequest
     ) -> ProviderDownloadResult:
-        if "offline" in request.video_reference.lower():
+        lowered_reference = request.video_reference.lower()
+        if "offline" in lowered_reference:
             raise ProviderUnavailableError(
                 public_message=self._public_failure_message,
                 internal_detail="hotmart_provider_offline_reference",
             )
+        if "timeout" in lowered_reference:
+            raise ProviderTimeoutError(
+                public_message=self._public_failure_message,
+                internal_detail="hotmart_provider_timeout_reference",
+            )
 
-        raw_payload = {
-            "ticket_id": f"hot-{uuid4().hex[:12]}",
-            "status": "accepted",
-            "artifact_location": None,
-        }
-        payload = HotmartTicketPayload.model_validate(raw_payload)
+        if "invalid_payload" in lowered_reference:
+            raw_payload = {
+                "status": "accepted",
+                "artifact_location": None,
+            }
+        else:
+            raw_payload = {
+                "ticket_id": f"hot-{uuid4().hex[:12]}",
+                "status": "accepted",
+                "artifact_location": None,
+            }
+
+        try:
+            payload = HotmartTicketPayload.model_validate(raw_payload)
+        except ValidationError as exc:
+            raise ProviderContractViolationError(
+                public_message=self._public_failure_message,
+                internal_detail=f"hotmart_invalid_contract={exc.errors()}",
+            ) from exc
         return ProviderDownloadResult(
             provider=self.provider_name,
             download_id=payload.ticket_id,

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     provider_retry_max_attempts: int = 3
     provider_retry_base_delay_seconds: float = 0.1
     download_worker_concurrency: int = 2
+    queue_backend: Literal["in_process", "redis"] = "in_process"
+    redis_url: str = "redis://localhost:6379/0"
+    redis_queue_key: str = "download_jobs_queue"
 
     model_config = SettingsConfigDict(
         env_file=".env",

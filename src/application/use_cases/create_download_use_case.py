@@ -1,5 +1,6 @@
 from hashlib import sha256
 
+from src.application.ports.download_queue_port import DownloadQueuePort
 from src.api.schemas.download_schema import CreateDownloadResponse, DownloadRequest
 from src.domain.policies.authorization_policy import AuthorizationPolicy
 from src.domain.entities.download_job import DownloadJob
@@ -8,7 +9,6 @@ from src.infrastructure.cache.memory.authorization_cache import AuthorizationCac
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
-from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 from src.shared.exceptions.errors import AppError, DownloadFailureError
 
 
@@ -17,7 +17,7 @@ class CreateDownloadUseCase:
         self,
         authorization_cache: AuthorizationCache,
         download_job_repository: InMemoryDownloadJobRepository,
-        download_queue: InProcessDownloadQueue,
+        download_queue: DownloadQueuePort,
         public_failure_message: str,
     ) -> None:
         self._authorization_cache = authorization_cache

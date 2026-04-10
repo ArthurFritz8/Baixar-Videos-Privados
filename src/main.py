@@ -5,13 +5,16 @@ from fastapi import FastAPI
 from src.api.controllers.download_controller import DownloadController
 from src.api.middlewares.error_handlers import register_exception_handlers
 from src.api.routes.download_routes import build_download_router
+from src.application.ports.download_queue_port import DownloadQueuePort
 from src.application.services.provider_registry import ProviderRegistry
+from src.application.use_cases.cancel_download_use_case import CancelDownloadUseCase
 from src.application.use_cases.create_download_use_case import CreateDownloadUseCase
 from src.application.use_cases.get_download_status_use_case import GetDownloadStatusUseCase
 from src.application.use_cases.process_download_job_use_case import (
     ProcessDownloadJobUseCase,
 )
 from src.infrastructure.cache.memory.authorization_cache import AuthorizationCache
+from src.infrastructure.observability.logger import get_logger
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
@@ -20,6 +23,30 @@ from src.infrastructure.providers.panda_video.panda_provider import PandaVideoPr
 from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 from src.infrastructure.queue.in_process.download_worker import InProcessDownloadWorker
 from src.shared.config.settings import Settings, get_settings
+
+logger = get_logger(__name__)
+
+
+def _build_download_queue(settings: Settings) -> DownloadQueuePort:
+    if settings.queue_backend == "redis":
+        try:
+            from src.infrastructure.queue.redis_optional.redis_download_queue import (
+                RedisDownloadQueue,
+            )
+
+            logger.info("download_queue_backend backend=redis")
+            return RedisDownloadQueue(
+                redis_url=settings.redis_url,
+                queue_key=settings.redis_queue_key,
+            )
+        except Exception as exc:
+            logger.warning(
+                "download_queue_backend_fallback backend=in_process reason=%s",
+                exc,
+            )
+
+    logger.info("download_queue_backend backend=in_process")
+    return InProcessDownloadQueue()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -30,7 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_size=resolved_settings.authorization_cache_max_size,
     )
     download_job_repository = InMemoryDownloadJobRepository()
-    download_queue = InProcessDownloadQueue()
+    download_queue = _build_download_queue(resolved_settings)
     provider_registry = ProviderRegistry(
         providers=[
             PandaVideoProvider(
@@ -62,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             yield
         finally:
             await download_worker.stop()
+            await download_queue.close()
 
     app = FastAPI(title=resolved_settings.app_name, lifespan=lifespan)
     register_exception_handlers(app, resolved_settings)
@@ -76,9 +104,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         download_job_repository=download_job_repository,
         public_failure_message=resolved_settings.public_download_failure_message,
     )
+    cancel_download_use_case = CancelDownloadUseCase(
+        download_job_repository=download_job_repository,
+        public_failure_message=resolved_settings.public_download_failure_message,
+    )
     controller = DownloadController(
         create_download_use_case=create_download_use_case,
         get_download_status_use_case=get_download_status_use_case,
+        cancel_download_use_case=cancel_download_use_case,
     )
     app.include_router(
         build_download_router(controller),

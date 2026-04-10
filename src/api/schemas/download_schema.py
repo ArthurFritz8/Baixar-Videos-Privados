@@ -35,7 +35,7 @@ class CreateDownloadResponse(BaseModel):
     status: Literal["accepted"]
     provider: Literal["panda_video", "hotmart"]
     download_id: str
-    queue_status: Literal["queued", "processing", "completed", "failed"]
+    queue_status: Literal["queued", "processing", "completed", "failed", "canceled"]
     code: str | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -46,8 +46,19 @@ class DownloadStatusResponse(BaseModel):
     message: str
     provider: Literal["panda_video", "hotmart"]
     download_id: str
-    queue_status: Literal["queued", "processing", "completed", "failed"]
+    queue_status: Literal["queued", "processing", "completed", "failed", "canceled"]
     artifact_location: str | None = None
+    code: str | None = None
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class CancelDownloadResponse(BaseModel):
+    success: bool
+    message: str
+    provider: Literal["panda_video", "hotmart"]
+    download_id: str
+    queue_status: Literal["canceled"]
     code: str | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
