@@ -1,24 +1,31 @@
-from src.api.schemas.download_schema import DownloadRequest, DownloadResponse
-from src.application.ports.provider_port import ProviderDownloadRequest
-from src.application.services.provider_registry import ProviderRegistry
+from hashlib import sha256
+
+from src.api.schemas.download_schema import CreateDownloadResponse, DownloadRequest
 from src.domain.policies.authorization_policy import AuthorizationPolicy
+from src.domain.entities.download_job import DownloadJob
 from src.domain.value_objects.authorization_context import AuthorizationContext
 from src.infrastructure.cache.memory.authorization_cache import AuthorizationCache
+from src.infrastructure.persistence.in_memory.download_job_repository import (
+    InMemoryDownloadJobRepository,
+)
+from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 from src.shared.exceptions.errors import AppError, DownloadFailureError
 
 
 class CreateDownloadUseCase:
     def __init__(
         self,
-        provider_registry: ProviderRegistry,
         authorization_cache: AuthorizationCache,
+        download_job_repository: InMemoryDownloadJobRepository,
+        download_queue: InProcessDownloadQueue,
         public_failure_message: str,
     ) -> None:
-        self._provider_registry = provider_registry
         self._authorization_cache = authorization_cache
+        self._download_job_repository = download_job_repository
+        self._download_queue = download_queue
         self._public_failure_message = public_failure_message
 
-    async def execute(self, request: DownloadRequest) -> DownloadResponse:
+    async def execute(self, request: DownloadRequest) -> CreateDownloadResponse:
         try:
             authorization_context = AuthorizationContext(
                 provider=request.provider,
@@ -41,32 +48,46 @@ class CreateDownloadUseCase:
                 )
                 self._authorization_cache.set(cache_key, True)
 
-            provider = self._provider_registry.get(
-                provider_name=request.provider,
-                public_failure_message=self._public_failure_message,
+            resolved_download_id = request.download_id or self._generate_download_id(request)
+            job = DownloadJob.new(
+                download_id=resolved_download_id,
+                provider=request.provider,
+                video_reference=request.video_reference,
+                requester_id=request.requester_id,
+                session_proof=request.authorization.session_proof,
+                entitlement_proof=request.authorization.entitlement_proof,
             )
-            provider_result = await provider.request_download_ticket(
-                ProviderDownloadRequest(
-                    provider=request.provider,
-                    video_reference=request.video_reference,
-                    requester_id=request.requester_id,
-                    session_proof=request.authorization.session_proof,
-                    entitlement_proof=request.authorization.entitlement_proof,
-                )
-            )
+            saved_job, created = self._download_job_repository.create_if_absent(job)
+            if created:
+                await self._download_queue.enqueue(saved_job.download_id)
 
-            return DownloadResponse(
+            return CreateDownloadResponse(
                 success=True,
-                message="Download autorizado e em processamento.",
+                message=(
+                    "Download autorizado e enfileirado."
+                    if created
+                    else "Requisicao ja registrada para este download_id."
+                ),
                 status="accepted",
-                provider=provider_result.provider,
-                download_id=provider_result.download_id,
-                artifact_location=provider_result.artifact_location,
+                provider=saved_job.provider,
+                download_id=saved_job.download_id,
+                queue_status=saved_job.queue_status,
             )
         except AppError:
             raise
         except Exception as exc:
             raise DownloadFailureError(
                 public_message=self._public_failure_message,
-                internal_detail=f"unhandled_download_error={exc}",
+                internal_detail=f"enqueue_download_error={exc}",
             ) from exc
+
+    @staticmethod
+    def _generate_download_id(request: DownloadRequest) -> str:
+        fingerprint = "|".join(
+            [
+                request.provider,
+                request.video_reference,
+                request.requester_id,
+            ]
+        )
+        return f"dl-{sha256(fingerprint.encode('utf-8')).hexdigest()[:20]}"

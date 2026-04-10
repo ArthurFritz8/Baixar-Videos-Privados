@@ -47,3 +47,13 @@ class ProviderNotSupportedError(AppError):
             status_code=400,
             internal_detail=internal_detail,
         )
+
+
+class DownloadNotFoundError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_NOT_FOUND",
+            public_message=public_message,
+            status_code=404,
+            internal_detail=internal_detail,
+        )

@@ -18,6 +18,7 @@ class DownloadRequest(BaseModel):
     provider: Literal["panda_video", "hotmart"]
     video_reference: str = Field(min_length=3, max_length=256)
     requester_id: str = Field(min_length=3, max_length=128)
+    download_id: str | None = Field(default=None, min_length=8, max_length=128)
     authorization: AuthorizationProof
     prefer_cached_authorization: bool = True
 
@@ -28,13 +29,25 @@ class DownloadRequest(BaseModel):
     )
 
 
-class DownloadResponse(BaseModel):
+class CreateDownloadResponse(BaseModel):
     success: bool
     message: str
-    status: Literal["accepted", "failed"]
+    status: Literal["accepted"]
+    provider: Literal["panda_video", "hotmart"]
+    download_id: str
+    queue_status: Literal["queued", "processing", "completed", "failed"]
     code: str | None = None
-    provider: str | None = None
-    download_id: str | None = None
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class DownloadStatusResponse(BaseModel):
+    success: bool
+    message: str
+    provider: Literal["panda_video", "hotmart"]
+    download_id: str
+    queue_status: Literal["queued", "processing", "completed", "failed"]
     artifact_location: str | None = None
+    code: str | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
