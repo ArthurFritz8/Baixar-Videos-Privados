@@ -22,6 +22,9 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 
 - Executar: `start_api.bat`
 - Validar ambiente sem iniciar servidor: `start_api.bat --check`
+- Executar testes: `run_tests.bat`
+- Executar testes com filtro: `run_tests.bat -k cancel -q`
+- Validar ambiente de testes sem executar suite: `run_tests.bat --check`
 
 ## Endpoint Base
 
