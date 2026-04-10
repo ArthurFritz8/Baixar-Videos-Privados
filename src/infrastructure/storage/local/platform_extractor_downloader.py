@@ -109,11 +109,11 @@ class PlatformExtractorDownloader:
     def _resolve_format(quality_preference: str) -> str:
         normalized = (quality_preference or "best").lower()
         if normalized == "high":
-            return "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
+            return "best[height<=1080][vcodec!=none][acodec!=none]/best[height<=1080]/best"
         if normalized == "medium":
-            return "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+            return "best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]/best"
         if normalized == "low":
-            return "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
+            return "best[height<=480][vcodec!=none][acodec!=none]/best[height<=480]/best"
         if normalized == "audio":
             return "bestaudio/best"
-        return "bestvideo+bestaudio/best"
+        return "best[vcodec!=none][acodec!=none]/best"
