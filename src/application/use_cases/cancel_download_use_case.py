@@ -25,7 +25,7 @@ class CancelDownloadUseCase:
                 internal_detail=f"download_id_not_found={download_id}",
             )
 
-        if job.queue_status == "queued":
+        if job.queue_status in ("queued", "processing"):
             canceled_job = self._download_job_repository.mark_canceled(
                 download_id=download_id,
                 error_code="CANCELED_BY_USER",
@@ -37,7 +37,11 @@ class CancelDownloadUseCase:
                 )
             return CancelDownloadResponse(
                 success=True,
-                message="Download cancelado.",
+                message=(
+                    "Cancelamento solicitado e aplicado ao job em processamento."
+                    if job.queue_status == "processing"
+                    else "Download cancelado."
+                ),
                 provider=canceled_job.provider,
                 download_id=canceled_job.download_id,
                 queue_status="canceled",

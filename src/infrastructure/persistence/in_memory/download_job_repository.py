@@ -47,6 +47,9 @@ class InMemoryDownloadJobRepository:
             if job is None:
                 return None
 
+            if job.queue_status in ("completed", "failed", "canceled"):
+                return replace(job)
+
             updated = job.to_completed(
                 artifact_location=artifact_location,
                 attempt_count=attempt_count,
@@ -65,6 +68,9 @@ class InMemoryDownloadJobRepository:
             if job is None:
                 return None
 
+            if job.queue_status in ("completed", "failed", "canceled"):
+                return replace(job)
+
             updated = job.to_failed(error_code=error_code, attempt_count=attempt_count)
             self._jobs[download_id] = updated
             return replace(updated)
@@ -75,7 +81,7 @@ class InMemoryDownloadJobRepository:
             if job is None:
                 return None
 
-            if job.queue_status in ("completed", "failed", "canceled", "processing"):
+            if job.queue_status in ("completed", "failed", "canceled"):
                 return replace(job)
 
             updated = job.to_canceled(error_code=error_code)

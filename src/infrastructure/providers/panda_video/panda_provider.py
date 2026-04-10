@@ -1,3 +1,4 @@
+import asyncio
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -32,6 +33,9 @@ class PandaVideoProvider(ProviderPort):
         self, request: ProviderDownloadRequest
     ) -> ProviderDownloadResult:
         lowered_reference = request.video_reference.lower()
+        if "slow" in lowered_reference:
+            await asyncio.sleep(0.4)
+
         if lowered_reference.startswith("blocked"):
             raise ProviderUnavailableError(
                 public_message=self._public_failure_message,

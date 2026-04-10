@@ -30,6 +30,7 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 2. A resposta retorna `download_id` e `queue_status`.
 3. O worker in-process processa o job com retry exponencial.
 4. O cliente consulta `GET /downloads/{download_id}` para acompanhar o status.
+5. O endpoint `POST /downloads/{download_id}/cancel` suporta cancelamento cooperativo para jobs em `queued` e `processing`.
 
 ## Backend de Fila
 

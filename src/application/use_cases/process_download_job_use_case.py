@@ -37,6 +37,9 @@ class ProcessDownloadJobUseCase:
 
         attempt = 0
         while True:
+            if self._is_canceled(download_id):
+                return
+
             attempt += 1
             try:
                 result = await provider.request_download_ticket(
@@ -55,6 +58,9 @@ class ProcessDownloadJobUseCase:
                 )
                 return
             except AppError as exc:
+                if self._is_canceled(download_id):
+                    return
+
                 should_retry = exc.code in ("PROVIDER_TIMEOUT", "PROVIDER_UNAVAILABLE")
                 if (not should_retry) or (attempt >= self._retry_max_attempts):
                     self._download_job_repository.mark_failed(
@@ -65,9 +71,18 @@ class ProcessDownloadJobUseCase:
                     return
                 await asyncio.sleep(self._retry_base_delay_seconds * (2 ** (attempt - 1)))
             except Exception:
+                if self._is_canceled(download_id):
+                    return
+
                 self._download_job_repository.mark_failed(
                     download_id=download_id,
                     error_code="DOWNLOAD_FAILED",
                     attempt_count=attempt,
                 )
                 return
+
+    def _is_canceled(self, download_id: str) -> bool:
+        current = self._download_job_repository.get(download_id)
+        if current is None:
+            return False
+        return current.queue_status == "canceled"

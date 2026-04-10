@@ -169,3 +169,34 @@ def test_cancel_completed_download_returns_conflict(client: TestClient) -> None:
     assert cancel_body["success"] is False
     assert cancel_body["message"] == "Nao foi possivel baixar o video."
     assert cancel_body["code"] == "DOWNLOAD_CANCELLATION_NOT_ALLOWED"
+
+
+def test_cancel_processing_download_applies_cooperative_cancellation(
+    client: TestClient,
+) -> None:
+    create_response = client.post(
+        "/api/v1/downloads",
+        json={
+            "provider": "panda_video",
+            "video_reference": "slow-video-cancel-001",
+            "requester_id": "user-cancel-processing-001",
+            "download_id": "dl-cancel-processing-001",
+            "authorization": {
+                "session_proof": "abcdefgh",
+                "entitlement_proof": "ijklmnop",
+            },
+            "prefer_cached_authorization": True,
+        },
+    )
+    assert create_response.status_code == 200
+
+    cancel_response = client.post("/api/v1/downloads/dl-cancel-processing-001/cancel")
+    assert cancel_response.status_code == 200
+    cancel_body = cancel_response.json()
+    assert cancel_body["success"] is True
+    assert cancel_body["queue_status"] == "canceled"
+    assert cancel_body["code"] == "CANCELED_BY_USER"
+
+    final_status = _wait_for_terminal_status(client, "dl-cancel-processing-001")
+    assert final_status["queue_status"] == "canceled"
+    assert final_status["code"] == "CANCELED_BY_USER"
