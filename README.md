@@ -41,6 +41,17 @@ Use somente para conteudos com autorizacao legitima do titular e em conformidade
 - Executar testes com filtro: `run_tests.bat -k cancel -q`
 - Validar ambiente de testes sem executar suite: `run_tests.bat --check`
 - Pipeline local (testes + smoke + abrir docs): `publish_local.bat`
+- Download por link via CMD: `download_link.bat "URL_DO_VIDEO" [provider]`
+
+### Baixar por CMD (1 comando)
+
+1. Inicie a API: `start_api.bat`
+2. Em outro terminal, execute: `download_link.bat "https://www.youtube.com/watch?v=..."`
+3. O script envia para API, acompanha status e baixa o arquivo final no diretorio atual.
+
+Observacao:
+- Detectar automaticamente a aba aberta no navegador nao e suportado por este projeto sem extensao/integração especifica do navegador.
+- O fluxo suportado oficialmente e informar o link no CMD.
 
 ## Endpoints
 
