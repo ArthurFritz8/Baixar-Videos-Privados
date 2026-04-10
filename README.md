@@ -18,6 +18,11 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 2. Instalar dependencias: `pip install -e .[dev]`
 3. Iniciar API: `uvicorn src.main:app --reload`
 
+### Atalho Windows (.bat)
+
+- Executar: `start_api.bat`
+- Validar ambiente sem iniciar servidor: `start_api.bat --check`
+
 ## Endpoint Base
 
 - `POST /api/v1/downloads`
