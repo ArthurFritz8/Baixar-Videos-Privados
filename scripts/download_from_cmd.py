@@ -116,6 +116,9 @@ def main() -> int:
     headers = build_headers(settings)
 
     provider = args.provider or infer_provider(args.url)
+    resolved_download_id = args.download_id or (
+        f"dl-cli-{int(time.time() * 1000)}-{secrets.token_hex(4)}"
+    )
     session_proof = f"sess-{secrets.token_hex(8)}"
     entitlement_proof = f"ent-{secrets.token_hex(8)}"
     if session_proof == entitlement_proof:
@@ -124,6 +127,7 @@ def main() -> int:
     payload: dict[str, object] = {
         "provider": provider,
         "video_reference": args.url,
+        "download_id": resolved_download_id,
         "requester_id": args.requester_id,
         "authorization": {
             "session_proof": session_proof,
@@ -131,8 +135,6 @@ def main() -> int:
         },
         "prefer_cached_authorization": True,
     }
-    if args.download_id:
-        payload["download_id"] = args.download_id
 
     api_base = args.api_base.rstrip("/")
     api_prefix = settings.api_prefix

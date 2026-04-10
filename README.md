@@ -48,6 +48,7 @@ Use somente para conteudos com autorizacao legitima do titular e em conformidade
 1. Inicie a API: `start_api.bat`
 2. Em outro terminal, execute: `download_link.bat "https://www.youtube.com/watch?v=..."`
 3. O script envia para API, acompanha status e baixa o arquivo final no diretorio atual.
+4. Cada execucao gera `download_id` unico automaticamente para permitir nova tentativa do mesmo link.
 
 Observacao:
 - Tambem ha suporte via extensao para Chrome/Edge (aba ativa).
@@ -57,6 +58,7 @@ Observacao:
 1. Carregue a extensao em modo desenvolvedor a partir de `integrations/browser-extension`.
 2. Configure `API Base`, `API Prefix`, `Header API Key` e `API Key` no popup.
 3. Abra a pagina com o video/link autorizado e clique em `Baixar Aba Atual`.
+4. Cada clique gera `download_id` unico automaticamente para evitar reaproveitar status antigo.
 
 Guia detalhado: `integrations/browser-extension/README.md`.
 

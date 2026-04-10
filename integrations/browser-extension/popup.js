@@ -82,13 +82,16 @@ async function runDownloadFromActiveTab() {
       settings.providerOverride === "auto"
         ? inferProvider(tab.url)
         : settings.providerOverride;
+    const generatedDownloadId = `dl-browser-${Date.now().toString(36)}-${randomHex(8)}`;
 
     appendStatus(`Aba ativa: ${tab.url}`);
     appendStatus(`Provider resolvido: ${provider}`);
+    appendStatus(`download_id gerado: ${generatedDownloadId}`);
 
     const createPayload = {
       provider,
       video_reference: tab.url,
+      download_id: generatedDownloadId,
       quality_preference: settings.qualityPreference,
       requester_id: settings.requesterId,
       authorization: {
@@ -100,6 +103,9 @@ async function runDownloadFromActiveTab() {
 
     const createBody = await requestJson(settings, "POST", "/downloads", createPayload);
     const downloadId = createBody.download_id;
+    if (createBody.message) {
+      appendStatus(`API: ${createBody.message}`);
+    }
     appendStatus(`Download enfileirado: ${downloadId}`);
 
     const finalStatus = await waitForTerminalStatus(settings, downloadId);

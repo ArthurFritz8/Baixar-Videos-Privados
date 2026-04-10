@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from src.application.ports.download_job_repository_port import DownloadJobRepositoryPort
 from src.application.ports.provider_port import ProviderDownloadRequest
 from src.application.services.provider_registry import ProviderRegistry
+from src.infrastructure.observability.logger import get_logger
 from src.infrastructure.observability.metrics_registry import MetricsRegistry
 from src.infrastructure.storage.local.authorized_artifact_downloader import (
     AuthorizedArtifactDownloader,
@@ -12,6 +13,8 @@ from src.infrastructure.storage.local.platform_extractor_downloader import (
     PlatformExtractorDownloader,
 )
 from src.shared.exceptions.errors import AppError
+
+logger = get_logger(__name__)
 
 
 class ProcessDownloadJobUseCase:
@@ -97,6 +100,13 @@ class ProcessDownloadJobUseCase:
                 self._metrics_registry.inc_counter("jobs_completed_total")
                 return
             except AppError as exc:
+                logger.warning(
+                    "process_download_job_app_error download_id=%s code=%s attempt=%s detail=%s",
+                    download_id,
+                    exc.code,
+                    attempt,
+                    exc.internal_detail,
+                )
                 if self._is_canceled(download_id):
                     return
 
@@ -110,7 +120,13 @@ class ProcessDownloadJobUseCase:
                     self._metrics_registry.inc_counter("jobs_failed_total")
                     return
                 await asyncio.sleep(self._retry_base_delay_seconds * (2 ** (attempt - 1)))
-            except Exception:
+            except Exception as exc:
+                logger.exception(
+                    "process_download_job_unexpected_error download_id=%s attempt=%s",
+                    download_id,
+                    attempt,
+                    exc_info=exc,
+                )
                 if self._is_canceled(download_id):
                     return
 
