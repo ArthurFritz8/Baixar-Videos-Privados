@@ -67,6 +67,7 @@ def test_downloads_authorized_direct_url_to_local_storage(
 
     settings = Settings(
         job_repository_backend="in_memory",
+        api_key="",
         download_output_dir=str(tmp_path),
         allowed_source_hosts="127.0.0.1",
     )
@@ -107,6 +108,7 @@ def test_rejects_source_host_outside_allowlist(
 
     settings = Settings(
         job_repository_backend="in_memory",
+        api_key="",
         download_output_dir=str(tmp_path),
         allowed_source_hosts="example.com",
     )
