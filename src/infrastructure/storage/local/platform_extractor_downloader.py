@@ -26,9 +26,11 @@ class PlatformExtractorDownloader:
         output_dir: str,
         enabled: bool,
         public_failure_message: str,
+        concurrent_fragment_downloads: int = 8,
     ) -> None:
         self._output_dir = Path(output_dir)
         self._enabled = enabled
+        self._concurrent_fragment_downloads = max(1, concurrent_fragment_downloads)
         self._public_failure_message = public_failure_message
 
     def supports(self, source_url: str) -> bool:
@@ -78,6 +80,7 @@ class PlatformExtractorDownloader:
             "overwrites": True,
             "nopart": True,
             "cachedir": False,
+            "concurrent_fragment_downloads": self._concurrent_fragment_downloads,
         }
 
         def _run_extract() -> None:

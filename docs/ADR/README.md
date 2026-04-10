@@ -11,3 +11,4 @@
 - ADR 009 - Expansao para Plataformas Sociais com Extractor Opcional
 - ADR 010 - Operacao Producao Local com SQLite, Seguranca e Observabilidade
 - ADR 011 - Integracao Chrome/Edge via Extensao de Aba Ativa
+- ADR 012 - Tuning de Concorrencia no Extractor HLS

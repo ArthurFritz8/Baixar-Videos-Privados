@@ -151,6 +151,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     platform_extractor_downloader = PlatformExtractorDownloader(
         output_dir=resolved_settings.download_output_dir,
         enabled=resolved_settings.enable_platform_extractor,
+        concurrent_fragment_downloads=resolved_settings.extractor_concurrent_fragment_downloads,
         public_failure_message=resolved_settings.public_download_failure_message,
     )
 

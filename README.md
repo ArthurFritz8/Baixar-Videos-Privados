@@ -100,6 +100,13 @@ Guia detalhado: `integrations/browser-extension/README.md`.
 - Token de arquivo assinado com TTL curto para download final.
 - Mensagem publica de erro operacional unica para frontend.
 
+## Desempenho de Processamento
+
+- Para reduzir tempo de processamento em links HLS (YouTube/Panda), ajuste `EXTRACTOR_CONCURRENT_FRAGMENT_DOWNLOADS`.
+- Valor padrao: `8`.
+- Em conexoes boas, valores entre `8` e `16` costumam acelerar o download.
+- No popup da extensao, usar `quality` em `medium` ou `low` tambem reduz tempo de processamento.
+
 ### Perfil de Hardening Recomendado
 
 - `REQUESTER_RATE_LIMIT_MAX_REQUESTS=12` com `REQUESTER_RATE_LIMIT_WINDOW_SECONDS=60`.

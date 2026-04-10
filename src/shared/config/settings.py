@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     download_http_timeout_seconds: float = 120.0
     allowed_source_hosts: str = ""
     enable_platform_extractor: bool = True
+    extractor_concurrent_fragment_downloads: int = 8
     download_quality_default: Literal["best", "high", "medium", "low", "audio"] = "best"
     download_file_token_secret: str = "change-me-in-prod"
     download_file_token_ttl_seconds: int = 300
