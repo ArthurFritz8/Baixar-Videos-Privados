@@ -20,14 +20,29 @@ from src.infrastructure.persistence.in_memory.download_job_repository import (
 )
 from src.infrastructure.providers.hotmart.hotmart_provider import HotmartProvider
 from src.infrastructure.providers.panda_video.panda_provider import PandaVideoProvider
+from src.infrastructure.providers.platform_links.platform_link_provider import (
+    PlatformLinkProvider,
+)
 from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 from src.infrastructure.queue.in_process.download_worker import InProcessDownloadWorker
 from src.infrastructure.storage.local.authorized_artifact_downloader import (
     AuthorizedArtifactDownloader,
 )
+from src.infrastructure.storage.local.platform_extractor_downloader import (
+    PlatformExtractorDownloader,
+)
 from src.shared.config.settings import Settings, get_settings
 
 logger = get_logger(__name__)
+
+PLATFORM_PROVIDER_CONFIG: list[tuple[str, str, set[str]]] = [
+    ("youtube", "yt", {"youtube.com", "youtu.be"}),
+    ("instagram", "ig", {"instagram.com"}),
+    ("tiktok", "tk", {"tiktok.com"}),
+    ("facebook", "fb", {"facebook.com", "fb.watch"}),
+    ("x", "x", {"x.com", "twitter.com"}),
+    ("vimeo", "vi", {"vimeo.com", "player.vimeo.com"}),
+]
 
 
 def _build_download_queue(settings: Settings) -> DownloadQueuePort:
@@ -52,6 +67,23 @@ def _build_download_queue(settings: Settings) -> DownloadQueuePort:
     return InProcessDownloadQueue()
 
 
+def _build_provider_registry(settings: Settings) -> ProviderRegistry:
+    providers = [
+        PandaVideoProvider(public_failure_message=settings.public_download_failure_message),
+        HotmartProvider(public_failure_message=settings.public_download_failure_message),
+    ]
+    for provider_name, ticket_prefix, allowed_hosts in PLATFORM_PROVIDER_CONFIG:
+        providers.append(
+            PlatformLinkProvider(
+                provider_name=provider_name,
+                ticket_prefix=ticket_prefix,
+                allowed_hosts=allowed_hosts,
+                public_failure_message=settings.public_download_failure_message,
+            )
+        )
+    return ProviderRegistry(providers=providers)
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     allowed_source_hosts = {
@@ -66,20 +98,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     download_job_repository = InMemoryDownloadJobRepository()
     download_queue = _build_download_queue(resolved_settings)
-    provider_registry = ProviderRegistry(
-        providers=[
-            PandaVideoProvider(
-                public_failure_message=resolved_settings.public_download_failure_message
-            ),
-            HotmartProvider(
-                public_failure_message=resolved_settings.public_download_failure_message
-            ),
-        ]
-    )
+    provider_registry = _build_provider_registry(resolved_settings)
     artifact_downloader = AuthorizedArtifactDownloader(
         output_dir=resolved_settings.download_output_dir,
         http_timeout_seconds=resolved_settings.download_http_timeout_seconds,
         allowed_source_hosts=allowed_source_hosts,
+        public_failure_message=resolved_settings.public_download_failure_message,
+    )
+    platform_extractor_downloader = PlatformExtractorDownloader(
+        output_dir=resolved_settings.download_output_dir,
+        enabled=resolved_settings.enable_platform_extractor,
         public_failure_message=resolved_settings.public_download_failure_message,
     )
 
@@ -87,6 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         provider_registry=provider_registry,
         download_job_repository=download_job_repository,
         artifact_downloader=artifact_downloader,
+        platform_extractor_downloader=platform_extractor_downloader,
         public_failure_message=resolved_settings.public_download_failure_message,
         retry_max_attempts=resolved_settings.provider_retry_max_attempts,
         retry_base_delay_seconds=resolved_settings.provider_retry_base_delay_seconds,

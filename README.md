@@ -12,11 +12,23 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 - FastAPI
 - Pydantic
 
+## Plataformas Aceitas
+
+- `panda_video`
+- `hotmart`
+- `youtube`
+- `instagram`
+- `tiktok`
+- `facebook`
+- `x`
+- `vimeo`
+
 ## Executar Localmente
 
 1. Criar ambiente virtual.
 2. Instalar dependencias: `pip install -e .[dev]`
-3. Iniciar API: `uvicorn src.main:app --reload`
+3. Para links de plataformas sociais, instalar extractor opcional: `pip install -e .[extractor]`
+4. Iniciar API: `uvicorn src.main:app --reload`
 
 ### Atalho Windows (.bat)
 
@@ -51,6 +63,7 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 - O backend suporta download real quando `video_reference` recebe uma URL HTTP/HTTPS autorizada (ex.: link assinado obtido pelo proprio usuario no provedor).
 - O arquivo e salvo localmente no diretorio configurado por `DOWNLOAD_OUTPUT_DIR`.
 - Opcionalmente, limite hosts permitidos com `ALLOWED_SOURCE_HOSTS` (lista separada por virgula).
+- Para plataformas como YouTube/Instagram/TikTok, o projeto usa extractor open-source opcional (`yt-dlp`) para links publicos.
 
 Exemplo de payload:
 

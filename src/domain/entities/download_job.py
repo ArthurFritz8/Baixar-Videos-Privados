@@ -3,6 +3,16 @@ from datetime import datetime, timezone
 from typing import Literal
 
 QueueStatus = Literal["queued", "processing", "completed", "failed", "canceled"]
+ProviderName = Literal[
+    "panda_video",
+    "hotmart",
+    "youtube",
+    "instagram",
+    "tiktok",
+    "facebook",
+    "x",
+    "vimeo",
+]
 
 
 def _utc_now() -> datetime:
@@ -12,7 +22,7 @@ def _utc_now() -> datetime:
 @dataclass(frozen=True)
 class DownloadJob:
     download_id: str
-    provider: Literal["panda_video", "hotmart"]
+    provider: ProviderName
     video_reference: str
     requester_id: str
     session_proof: str
@@ -28,7 +38,7 @@ class DownloadJob:
     def new(
         cls,
         download_id: str,
-        provider: Literal["panda_video", "hotmart"],
+        provider: ProviderName,
         video_reference: str,
         requester_id: str,
         session_proof: str,

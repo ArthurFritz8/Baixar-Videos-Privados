@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     download_output_dir: str = "downloads"
     download_http_timeout_seconds: float = 120.0
     allowed_source_hosts: str = ""
+    enable_platform_extractor: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

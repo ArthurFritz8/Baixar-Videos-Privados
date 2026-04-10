@@ -44,6 +44,14 @@ class NoopArtifactDownloader(AuthorizedArtifactDownloader):
         return source_url
 
 
+class NoopPlatformExtractorDownloader:
+    def supports(self, source_url: str) -> bool:
+        return False
+
+    async def download(self, source_url: str, download_id: str) -> str:
+        raise AssertionError("platform extractor nao deveria ser chamado")
+
+
 async def _run_process_with_cancellation() -> str:
     repository = InMemoryDownloadJobRepository()
     repository.create_if_absent(
@@ -61,6 +69,7 @@ async def _run_process_with_cancellation() -> str:
         provider_registry=ProviderRegistry(providers=[SlowSuccessProvider()]),
         download_job_repository=repository,
         artifact_downloader=NoopArtifactDownloader(),
+        platform_extractor_downloader=NoopPlatformExtractorDownloader(),
         public_failure_message="Nao foi possivel baixar o video.",
         retry_max_attempts=3,
         retry_base_delay_seconds=0.05,

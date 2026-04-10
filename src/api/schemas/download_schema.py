@@ -2,6 +2,17 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+ProviderName = Literal[
+    "panda_video",
+    "hotmart",
+    "youtube",
+    "instagram",
+    "tiktok",
+    "facebook",
+    "x",
+    "vimeo",
+]
+
 
 class AuthorizationProof(BaseModel):
     session_proof: str = Field(min_length=8, max_length=2048)
@@ -15,8 +26,8 @@ class AuthorizationProof(BaseModel):
 
 
 class DownloadRequest(BaseModel):
-    provider: Literal["panda_video", "hotmart"]
-    video_reference: str = Field(min_length=3, max_length=256)
+    provider: ProviderName
+    video_reference: str = Field(min_length=3, max_length=2048)
     requester_id: str = Field(min_length=3, max_length=128)
     download_id: str | None = Field(default=None, min_length=8, max_length=128)
     authorization: AuthorizationProof
@@ -33,7 +44,7 @@ class CreateDownloadResponse(BaseModel):
     success: bool
     message: str
     status: Literal["accepted"]
-    provider: Literal["panda_video", "hotmart"]
+    provider: ProviderName
     download_id: str
     queue_status: Literal["queued", "processing", "completed", "failed", "canceled"]
     code: str | None = None
@@ -44,7 +55,7 @@ class CreateDownloadResponse(BaseModel):
 class DownloadStatusResponse(BaseModel):
     success: bool
     message: str
-    provider: Literal["panda_video", "hotmart"]
+    provider: ProviderName
     download_id: str
     queue_status: Literal["queued", "processing", "completed", "failed", "canceled"]
     artifact_location: str | None = None
@@ -56,7 +67,7 @@ class DownloadStatusResponse(BaseModel):
 class CancelDownloadResponse(BaseModel):
     success: bool
     message: str
-    provider: Literal["panda_video", "hotmart"]
+    provider: ProviderName
     download_id: str
     queue_status: Literal["canceled"]
     code: str | None = None

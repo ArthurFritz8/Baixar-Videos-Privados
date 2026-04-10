@@ -9,6 +9,9 @@ from src.infrastructure.persistence.in_memory.download_job_repository import (
 from src.infrastructure.storage.local.authorized_artifact_downloader import (
     AuthorizedArtifactDownloader,
 )
+from src.infrastructure.storage.local.platform_extractor_downloader import (
+    PlatformExtractorDownloader,
+)
 from src.shared.exceptions.errors import AppError
 
 
@@ -18,6 +21,7 @@ class ProcessDownloadJobUseCase:
         provider_registry: ProviderRegistry,
         download_job_repository: InMemoryDownloadJobRepository,
         artifact_downloader: AuthorizedArtifactDownloader,
+        platform_extractor_downloader: PlatformExtractorDownloader,
         public_failure_message: str,
         retry_max_attempts: int,
         retry_base_delay_seconds: float,
@@ -25,6 +29,7 @@ class ProcessDownloadJobUseCase:
         self._provider_registry = provider_registry
         self._download_job_repository = download_job_repository
         self._artifact_downloader = artifact_downloader
+        self._platform_extractor_downloader = platform_extractor_downloader
         self._public_failure_message = public_failure_message
         self._retry_max_attempts = retry_max_attempts
         self._retry_base_delay_seconds = retry_base_delay_seconds
@@ -63,10 +68,20 @@ class ProcessDownloadJobUseCase:
                     resolved_artifact_location
                     and self._is_http_url(resolved_artifact_location)
                 ):
-                    resolved_artifact_location = await self._artifact_downloader.download(
-                        source_url=resolved_artifact_location,
-                        download_id=download_id,
-                    )
+                    if self._platform_extractor_downloader.supports(
+                        resolved_artifact_location
+                    ):
+                        resolved_artifact_location = (
+                            await self._platform_extractor_downloader.download(
+                                source_url=resolved_artifact_location,
+                                download_id=download_id,
+                            )
+                        )
+                    else:
+                        resolved_artifact_location = await self._artifact_downloader.download(
+                            source_url=resolved_artifact_location,
+                            download_id=download_id,
+                        )
 
                 if self._is_canceled(download_id):
                     return
