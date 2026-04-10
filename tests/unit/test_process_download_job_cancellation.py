@@ -11,6 +11,9 @@ from src.domain.entities.download_job import DownloadJob
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
+from src.infrastructure.storage.local.authorized_artifact_downloader import (
+    AuthorizedArtifactDownloader,
+)
 
 
 class SlowSuccessProvider(ProviderPort):
@@ -26,6 +29,19 @@ class SlowSuccessProvider(ProviderPort):
             status="accepted",
             artifact_location="memory://artifact",
         )
+
+
+class NoopArtifactDownloader(AuthorizedArtifactDownloader):
+    def __init__(self) -> None:
+        super().__init__(
+            output_dir="downloads-test",
+            http_timeout_seconds=1,
+            allowed_source_hosts=set(),
+            public_failure_message="Nao foi possivel baixar o video.",
+        )
+
+    async def download(self, source_url: str, download_id: str) -> str:
+        return source_url
 
 
 async def _run_process_with_cancellation() -> str:
@@ -44,6 +60,7 @@ async def _run_process_with_cancellation() -> str:
     use_case = ProcessDownloadJobUseCase(
         provider_registry=ProviderRegistry(providers=[SlowSuccessProvider()]),
         download_job_repository=repository,
+        artifact_downloader=NoopArtifactDownloader(),
         public_failure_message="Nao foi possivel baixar o video.",
         retry_max_attempts=3,
         retry_base_delay_seconds=0.05,

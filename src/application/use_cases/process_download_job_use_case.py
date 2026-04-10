@@ -1,9 +1,13 @@
 import asyncio
+from urllib.parse import urlparse
 
 from src.application.ports.provider_port import ProviderDownloadRequest
 from src.application.services.provider_registry import ProviderRegistry
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
+)
+from src.infrastructure.storage.local.authorized_artifact_downloader import (
+    AuthorizedArtifactDownloader,
 )
 from src.shared.exceptions.errors import AppError
 
@@ -13,12 +17,14 @@ class ProcessDownloadJobUseCase:
         self,
         provider_registry: ProviderRegistry,
         download_job_repository: InMemoryDownloadJobRepository,
+        artifact_downloader: AuthorizedArtifactDownloader,
         public_failure_message: str,
         retry_max_attempts: int,
         retry_base_delay_seconds: float,
     ) -> None:
         self._provider_registry = provider_registry
         self._download_job_repository = download_job_repository
+        self._artifact_downloader = artifact_downloader
         self._public_failure_message = public_failure_message
         self._retry_max_attempts = retry_max_attempts
         self._retry_base_delay_seconds = retry_base_delay_seconds
@@ -51,9 +57,23 @@ class ProcessDownloadJobUseCase:
                         entitlement_proof=job.entitlement_proof,
                     )
                 )
+
+                resolved_artifact_location = result.artifact_location
+                if (
+                    resolved_artifact_location
+                    and self._is_http_url(resolved_artifact_location)
+                ):
+                    resolved_artifact_location = await self._artifact_downloader.download(
+                        source_url=resolved_artifact_location,
+                        download_id=download_id,
+                    )
+
+                if self._is_canceled(download_id):
+                    return
+
                 self._download_job_repository.mark_completed(
                     download_id=download_id,
-                    artifact_location=result.artifact_location,
+                    artifact_location=resolved_artifact_location,
                     attempt_count=attempt,
                 )
                 return
@@ -86,3 +106,8 @@ class ProcessDownloadJobUseCase:
         if current is None:
             return False
         return current.queue_status == "canceled"
+
+    @staticmethod
+    def _is_http_url(value: str) -> bool:
+        parsed = urlparse(value)
+        return parsed.scheme.lower() in ("http", "https") and bool(parsed.netloc)

@@ -22,6 +22,9 @@ from src.infrastructure.providers.hotmart.hotmart_provider import HotmartProvide
 from src.infrastructure.providers.panda_video.panda_provider import PandaVideoProvider
 from src.infrastructure.queue.in_process.download_queue import InProcessDownloadQueue
 from src.infrastructure.queue.in_process.download_worker import InProcessDownloadWorker
+from src.infrastructure.storage.local.authorized_artifact_downloader import (
+    AuthorizedArtifactDownloader,
+)
 from src.shared.config.settings import Settings, get_settings
 
 logger = get_logger(__name__)
@@ -51,6 +54,11 @@ def _build_download_queue(settings: Settings) -> DownloadQueuePort:
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
+    allowed_source_hosts = {
+        host.strip().lower()
+        for host in resolved_settings.allowed_source_hosts.split(",")
+        if host.strip()
+    }
 
     authorization_cache = AuthorizationCache(
         ttl_seconds=resolved_settings.authorization_cache_ttl_seconds,
@@ -68,10 +76,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             ),
         ]
     )
+    artifact_downloader = AuthorizedArtifactDownloader(
+        output_dir=resolved_settings.download_output_dir,
+        http_timeout_seconds=resolved_settings.download_http_timeout_seconds,
+        allowed_source_hosts=allowed_source_hosts,
+        public_failure_message=resolved_settings.public_download_failure_message,
+    )
 
     process_download_job_use_case = ProcessDownloadJobUseCase(
         provider_registry=provider_registry,
         download_job_repository=download_job_repository,
+        artifact_downloader=artifact_downloader,
         public_failure_message=resolved_settings.public_download_failure_message,
         retry_max_attempts=resolved_settings.provider_retry_max_attempts,
         retry_base_delay_seconds=resolved_settings.provider_retry_base_delay_seconds,

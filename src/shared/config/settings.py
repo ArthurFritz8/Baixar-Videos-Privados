@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     queue_backend: Literal["in_process", "redis"] = "in_process"
     redis_url: str = "redis://localhost:6379/0"
     redis_queue_key: str = "download_jobs_queue"
+    download_output_dir: str = "downloads"
+    download_http_timeout_seconds: float = 120.0
+    allowed_source_hosts: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

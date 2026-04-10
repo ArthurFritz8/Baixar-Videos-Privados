@@ -59,6 +59,26 @@ class ProviderContractViolationError(AppError):
         )
 
 
+class SourceNotAllowedError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="SOURCE_NOT_ALLOWED",
+            public_message=public_message,
+            status_code=400,
+            internal_detail=internal_detail,
+        )
+
+
+class SourceDownloadFailedError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="SOURCE_DOWNLOAD_FAILED",
+            public_message=public_message,
+            status_code=502,
+            internal_detail=internal_detail,
+        )
+
+
 class ProviderNotSupportedError(AppError):
     def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
         super().__init__(

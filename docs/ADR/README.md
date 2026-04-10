@@ -7,3 +7,4 @@
 - ADR 005 - Cancelamento Cooperativo em Processing
 - ADR 006 - Script BAT Operacional para Windows
 - ADR 007 - Script BAT para Execucao de Testes no Windows
+- ADR 008 - Download Real por URL Autorizada

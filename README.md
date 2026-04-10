@@ -46,6 +46,28 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 - Opcional: `redis` (open-source, configurado por variaveis de ambiente).
 - Fallback automatico: se Redis nao estiver disponivel, o sistema volta para `in_process`.
 
+## Download Real por URL Autorizada
+
+- O backend suporta download real quando `video_reference` recebe uma URL HTTP/HTTPS autorizada (ex.: link assinado obtido pelo proprio usuario no provedor).
+- O arquivo e salvo localmente no diretorio configurado por `DOWNLOAD_OUTPUT_DIR`.
+- Opcionalmente, limite hosts permitidos com `ALLOWED_SOURCE_HOSTS` (lista separada por virgula).
+
+Exemplo de payload:
+
+```json
+{
+	"provider": "panda_video",
+	"video_reference": "https://seu-link-autorizado.exemplo/video.mp4",
+	"requester_id": "user-123",
+	"download_id": "dl-real-001",
+	"authorization": {
+		"session_proof": "abcdefgh",
+		"entitlement_proof": "ijklmnop"
+	},
+	"prefer_cached_authorization": true
+}
+```
+
 ## Mensagens Publicas
 
 - Falha operacional para frontend: `Nao foi possivel baixar o video.`

@@ -33,6 +33,14 @@ class HotmartProvider(ProviderPort):
         self, request: ProviderDownloadRequest
     ) -> ProviderDownloadResult:
         lowered_reference = request.video_reference.lower()
+        if lowered_reference.startswith("http://") or lowered_reference.startswith("https://"):
+            return ProviderDownloadResult(
+                provider=self.provider_name,
+                download_id=f"hot-{uuid4().hex[:12]}",
+                status="accepted",
+                artifact_location=request.video_reference,
+            )
+
         if "slow" in lowered_reference:
             await asyncio.sleep(0.4)
 
