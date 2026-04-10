@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 from src.shared.exceptions.errors import SourceDownloadFailedError
 
 SUPPORTED_PLATFORM_HOSTS = {
+    "pandavideo.com.br",
+    "tv.pandavideo.com.br",
     "youtube.com",
     "youtu.be",
     "instagram.com",

@@ -29,9 +29,41 @@ class BinaryHandler(BaseHTTPRequestHandler):
         return
 
 
+class HtmlHandler(BaseHTTPRequestHandler):
+    payload = b"<html><body>embed page</body></html>"
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path != "/embed":
+            self.send_response(404)
+            self.end_headers()
+            return
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(self.payload)))
+        self.end_headers()
+        self.wfile.write(self.payload)
+
+    def log_message(self, format: str, *args) -> None:  # noqa: A003
+        return
+
+
 @pytest.fixture
 def source_server() -> tuple[ThreadingHTTPServer, Thread]:
     server = ThreadingHTTPServer(("127.0.0.1", 0), BinaryHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server, thread
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=1)
+
+
+@pytest.fixture
+def html_source_server() -> tuple[ThreadingHTTPServer, Thread]:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), HtmlHandler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -134,4 +166,42 @@ def test_rejects_source_host_outside_allowlist(
         assert terminal_status["queue_status"] == "failed"
         assert terminal_status["success"] is False
         assert terminal_status["code"] == "SOURCE_NOT_ALLOWED"
+        assert terminal_status["message"] == "Nao foi possivel baixar o video."
+
+
+def test_rejects_html_page_content_for_direct_download(
+    tmp_path: Path,
+    html_source_server: tuple[ThreadingHTTPServer, Thread],
+) -> None:
+    server, _thread = html_source_server
+    port = server.server_address[1]
+
+    settings = Settings(
+        job_repository_backend="in_memory",
+        api_key="",
+        download_output_dir=str(tmp_path),
+        allowed_source_hosts="127.0.0.1",
+    )
+
+    with TestClient(create_app(settings)) as client:
+        create_response = client.post(
+            "/api/v1/downloads",
+            json={
+                "provider": "panda_video",
+                "video_reference": f"http://127.0.0.1:{port}/embed",
+                "requester_id": "user-real-download-003",
+                "download_id": "dl-real-download-003",
+                "authorization": {
+                    "session_proof": "abcdefgh",
+                    "entitlement_proof": "ijklmnop",
+                },
+                "prefer_cached_authorization": True,
+            },
+        )
+        assert create_response.status_code == 200
+
+        terminal_status = _wait_for_terminal_status(client, "dl-real-download-003")
+        assert terminal_status["queue_status"] == "failed"
+        assert terminal_status["success"] is False
+        assert terminal_status["code"] == "SOURCE_DOWNLOAD_FAILED"
         assert terminal_status["message"] == "Nao foi possivel baixar o video."

@@ -48,6 +48,15 @@ class AuthorizedArtifactDownloader:
             async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                 async with client.stream("GET", source_url) as response:
                     response.raise_for_status()
+                    content_type = (response.headers.get("content-type") or "").lower()
+                    if content_type.startswith("text/html"):
+                        raise SourceDownloadFailedError(
+                            public_message=self._public_failure_message,
+                            internal_detail=(
+                                "source_download_unexpected_html "
+                                f"content_type={content_type or 'missing'}"
+                            ),
+                        )
                     with local_path.open("wb") as output:
                         async for chunk in response.aiter_bytes():
                             output.write(chunk)
