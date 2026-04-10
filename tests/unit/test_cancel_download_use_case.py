@@ -4,6 +4,7 @@ import pytest
 
 from src.application.use_cases.cancel_download_use_case import CancelDownloadUseCase
 from src.domain.entities.download_job import DownloadJob
+from src.infrastructure.observability.metrics_registry import MetricsRegistry
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
@@ -16,6 +17,7 @@ def test_cancel_queued_download_succeeds() -> None:
     repository = InMemoryDownloadJobRepository()
     use_case = CancelDownloadUseCase(
         download_job_repository=repository,
+        metrics_registry=MetricsRegistry(enabled=True),
         public_failure_message="Nao foi possivel baixar o video.",
     )
 
@@ -24,6 +26,7 @@ def test_cancel_queued_download_succeeds() -> None:
             download_id="dl-cancel-queued-001",
             provider="panda_video",
             video_reference="video-queued-001",
+            quality_preference="best",
             requester_id="user-queued",
             session_proof="abcdefgh",
             entitlement_proof="ijklmnop",
@@ -40,6 +43,7 @@ def test_cancel_processing_download_succeeds_with_cooperative_mode() -> None:
     repository = InMemoryDownloadJobRepository()
     use_case = CancelDownloadUseCase(
         download_job_repository=repository,
+        metrics_registry=MetricsRegistry(enabled=True),
         public_failure_message="Nao foi possivel baixar o video.",
     )
 
@@ -48,6 +52,7 @@ def test_cancel_processing_download_succeeds_with_cooperative_mode() -> None:
             download_id="dl-cancel-processing-001",
             provider="hotmart",
             video_reference="video-processing-001",
+            quality_preference="best",
             requester_id="user-processing",
             session_proof="abcdefgh",
             entitlement_proof="ijklmnop",
@@ -66,6 +71,7 @@ def test_cancel_unknown_download_raises_not_found() -> None:
     repository = InMemoryDownloadJobRepository()
     use_case = CancelDownloadUseCase(
         download_job_repository=repository,
+        metrics_registry=MetricsRegistry(enabled=True),
         public_failure_message="Nao foi possivel baixar o video.",
     )
 

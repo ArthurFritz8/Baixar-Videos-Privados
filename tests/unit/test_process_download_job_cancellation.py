@@ -8,6 +8,7 @@ from src.application.ports.provider_port import (
 from src.application.services.provider_registry import ProviderRegistry
 from src.application.use_cases.process_download_job_use_case import ProcessDownloadJobUseCase
 from src.domain.entities.download_job import DownloadJob
+from src.infrastructure.observability.metrics_registry import MetricsRegistry
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
@@ -48,7 +49,12 @@ class NoopPlatformExtractorDownloader:
     def supports(self, source_url: str) -> bool:
         return False
 
-    async def download(self, source_url: str, download_id: str) -> str:
+    async def download(
+        self,
+        source_url: str,
+        download_id: str,
+        quality_preference: str,
+    ) -> str:
         raise AssertionError("platform extractor nao deveria ser chamado")
 
 
@@ -59,6 +65,7 @@ async def _run_process_with_cancellation() -> str:
             download_id="dl-coop-cancel-001",
             provider="panda_video",
             video_reference="video-coop-cancel-001",
+            quality_preference="best",
             requester_id="user-coop-cancel-001",
             session_proof="abcdefgh",
             entitlement_proof="ijklmnop",
@@ -70,6 +77,7 @@ async def _run_process_with_cancellation() -> str:
         download_job_repository=repository,
         artifact_downloader=NoopArtifactDownloader(),
         platform_extractor_downloader=NoopPlatformExtractorDownloader(),
+        metrics_registry=MetricsRegistry(enabled=True),
         public_failure_message="Nao foi possivel baixar o video.",
         retry_max_attempts=3,
         retry_base_delay_seconds=0.05,

@@ -13,6 +13,7 @@ ProviderName = Literal[
     "x",
     "vimeo",
 ]
+QualityPreference = Literal["best", "high", "medium", "low", "audio"]
 
 
 def _utc_now() -> datetime:
@@ -24,6 +25,7 @@ class DownloadJob:
     download_id: str
     provider: ProviderName
     video_reference: str
+    quality_preference: QualityPreference
     requester_id: str
     session_proof: str
     entitlement_proof: str
@@ -40,6 +42,7 @@ class DownloadJob:
         download_id: str,
         provider: ProviderName,
         video_reference: str,
+        quality_preference: QualityPreference,
         requester_id: str,
         session_proof: str,
         entitlement_proof: str,
@@ -49,6 +52,7 @@ class DownloadJob:
             download_id=download_id,
             provider=provider,
             video_reference=video_reference,
+            quality_preference=quality_preference,
             requester_id=requester_id,
             session_proof=session_proof,
             entitlement_proof=entitlement_proof,

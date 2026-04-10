@@ -8,6 +8,7 @@ from src.application.ports.provider_port import (
 from src.application.services.provider_registry import ProviderRegistry
 from src.application.use_cases.process_download_job_use_case import ProcessDownloadJobUseCase
 from src.domain.entities.download_job import DownloadJob
+from src.infrastructure.observability.metrics_registry import MetricsRegistry
 from src.infrastructure.persistence.in_memory.download_job_repository import (
     InMemoryDownloadJobRepository,
 )
@@ -43,7 +44,12 @@ class FakePlatformExtractorDownloader:
     def supports(self, source_url: str) -> bool:
         return "youtube.com" in source_url
 
-    async def download(self, source_url: str, download_id: str) -> str:
+    async def download(
+        self,
+        source_url: str,
+        download_id: str,
+        quality_preference: str,
+    ) -> str:
         self.called = True
         return f"downloads/{download_id}.mp4"
 
@@ -55,6 +61,7 @@ async def _run_platform_path() -> tuple[str, bool, bool]:
             download_id="dl-platform-extractor-001",
             provider="youtube",
             video_reference="https://www.youtube.com/watch?v=abc123",
+            quality_preference="best",
             requester_id="user-platform-001",
             session_proof="abcdefgh",
             entitlement_proof="ijklmnop",
@@ -69,6 +76,7 @@ async def _run_platform_path() -> tuple[str, bool, bool]:
         download_job_repository=repository,
         artifact_downloader=direct_downloader,
         platform_extractor_downloader=extractor_downloader,
+        metrics_registry=MetricsRegistry(enabled=True),
         public_failure_message="Nao foi possivel baixar o video.",
         retry_max_attempts=2,
         retry_base_delay_seconds=0.01,

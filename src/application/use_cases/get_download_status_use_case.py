@@ -1,14 +1,12 @@
 from src.api.schemas.download_schema import DownloadStatusResponse
-from src.infrastructure.persistence.in_memory.download_job_repository import (
-    InMemoryDownloadJobRepository,
-)
+from src.application.ports.download_job_repository_port import DownloadJobRepositoryPort
 from src.shared.exceptions.errors import DownloadNotFoundError
 
 
 class GetDownloadStatusUseCase:
     def __init__(
         self,
-        download_job_repository: InMemoryDownloadJobRepository,
+        download_job_repository: DownloadJobRepositoryPort,
         public_failure_message: str,
     ) -> None:
         self._download_job_repository = download_job_repository

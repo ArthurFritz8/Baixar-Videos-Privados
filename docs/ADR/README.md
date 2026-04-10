@@ -9,3 +9,4 @@
 - ADR 007 - Script BAT para Execucao de Testes no Windows
 - ADR 008 - Download Real por URL Autorizada
 - ADR 009 - Expansao para Plataformas Sociais com Extractor Opcional
+- ADR 010 - Operacao Producao Local com SQLite, Seguranca e Observabilidade

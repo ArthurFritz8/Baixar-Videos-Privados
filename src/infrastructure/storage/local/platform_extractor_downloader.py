@@ -42,7 +42,12 @@ class PlatformExtractorDownloader:
                 return True
         return False
 
-    async def download(self, source_url: str, download_id: str) -> str:
+    async def download(
+        self,
+        source_url: str,
+        download_id: str,
+        quality_preference: str,
+    ) -> str:
         if not self._enabled:
             raise SourceDownloadFailedError(
                 public_message=self._public_failure_message,
@@ -62,7 +67,7 @@ class PlatformExtractorDownloader:
 
         ydl_opts = {
             "outtmpl": output_template,
-            "format": "best[ext=mp4]/best",
+            "format": self._resolve_format(quality_preference),
             "noplaylist": True,
             "quiet": True,
             "no_warnings": True,
@@ -97,3 +102,16 @@ class PlatformExtractorDownloader:
 
         candidates.sort(key=lambda item: item.stat().st_mtime, reverse=True)
         return str(candidates[0])
+
+    @staticmethod
+    def _resolve_format(quality_preference: str) -> str:
+        normalized = (quality_preference or "best").lower()
+        if normalized == "high":
+            return "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
+        if normalized == "medium":
+            return "bestvideo[height<=720]+bestaudio/best[height<=720]/best"
+        if normalized == "low":
+            return "bestvideo[height<=480]+bestaudio/best[height<=480]/best"
+        if normalized == "audio":
+            return "bestaudio/best"
+        return "bestvideo+bestaudio/best"

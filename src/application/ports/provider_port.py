@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class ProviderDownloadRequest:
     provider: str
     video_reference: str
+    quality_preference: str
     requester_id: str
     session_proof: str
     entitlement_proof: str

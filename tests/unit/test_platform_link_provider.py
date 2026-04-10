@@ -22,6 +22,7 @@ def test_platform_provider_accepts_valid_youtube_host() -> None:
             ProviderDownloadRequest(
                 provider="youtube",
                 video_reference="https://www.youtube.com/watch?v=abc123",
+                quality_preference="best",
                 requester_id="user-yt-001",
                 session_proof="abcdefgh",
                 entitlement_proof="ijklmnop",
@@ -47,6 +48,7 @@ def test_platform_provider_rejects_invalid_host() -> None:
                 ProviderDownloadRequest(
                     provider="youtube",
                     video_reference="https://example.com/watch?v=abc123",
+                    quality_preference="best",
                     requester_id="user-yt-002",
                     session_proof="abcdefgh",
                     entitlement_proof="ijklmnop",

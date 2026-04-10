@@ -4,11 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.main import create_app
+from src.shared.config.settings import Settings
 
 
 @pytest.fixture(scope="module")
 def client() -> TestClient:
-    with TestClient(create_app()) as test_client:
+    with TestClient(create_app(Settings(job_repository_backend="in_memory"))) as test_client:
         yield test_client
 
 

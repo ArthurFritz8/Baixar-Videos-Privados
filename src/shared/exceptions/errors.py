@@ -107,3 +107,53 @@ class DownloadCancellationNotAllowedError(AppError):
             status_code=409,
             internal_detail=internal_detail,
         )
+
+
+class RateLimitExceededError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="RATE_LIMIT_EXCEEDED",
+            public_message=public_message,
+            status_code=429,
+            internal_detail=internal_detail,
+        )
+
+
+class ApiKeyInvalidError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="API_KEY_INVALID",
+            public_message=public_message,
+            status_code=401,
+            internal_detail=internal_detail,
+        )
+
+
+class DownloadFileNotReadyError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_FILE_NOT_READY",
+            public_message=public_message,
+            status_code=409,
+            internal_detail=internal_detail,
+        )
+
+
+class DownloadFileMissingError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_FILE_MISSING",
+            public_message=public_message,
+            status_code=404,
+            internal_detail=internal_detail,
+        )
+
+
+class DownloadFileTokenInvalidError(AppError):
+    def __init__(self, public_message: str, internal_detail: str | None = None) -> None:
+        super().__init__(
+            code="DOWNLOAD_FILE_TOKEN_INVALID",
+            public_message=public_message,
+            status_code=401,
+            internal_detail=internal_detail,
+        )

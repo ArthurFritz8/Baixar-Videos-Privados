@@ -1,16 +1,18 @@
 # Baixar Videos Privados
 
-Fundacao tecnica em Python para um fluxo de download autorizado com arquitetura modular.
+API Python para download autorizado, com arquitetura modular, processamento assincrono e foco em operacao local de baixo custo.
 
 ## Aviso de Uso
 
-Este projeto deve ser usado apenas para conteudos com autorizacao legitima do titular e em conformidade com os termos da plataforma.
+Use somente para conteudos com autorizacao legitima do titular e em conformidade com os termos da plataforma.
 
 ## Stack
 
 - Python 3.11+
 - FastAPI
 - Pydantic
+- SQLite (padrao para estado de jobs)
+- Redis (opcional para fila)
 
 ## Plataformas Aceitas
 
@@ -27,43 +29,63 @@ Este projeto deve ser usado apenas para conteudos com autorizacao legitima do ti
 
 1. Criar ambiente virtual.
 2. Instalar dependencias: `pip install -e .[dev]`
-3. Para links de plataformas sociais, instalar extractor opcional: `pip install -e .[extractor]`
-4. Iniciar API: `uvicorn src.main:app --reload`
+3. Para links sociais, instalar extractor opcional: `pip install -e .[extractor]`
+4. Copiar `.env.example` para `.env` e ajustar variaveis.
+5. Iniciar API: `uvicorn src.main:app --reload`
 
-### Atalho Windows (.bat)
+### Atalhos Windows (.bat)
 
-- Executar: `start_api.bat`
+- Executar API: `start_api.bat`
 - Validar ambiente sem iniciar servidor: `start_api.bat --check`
 - Executar testes: `run_tests.bat`
 - Executar testes com filtro: `run_tests.bat -k cancel -q`
 - Validar ambiente de testes sem executar suite: `run_tests.bat --check`
+- Pipeline local (testes + smoke + abrir docs): `publish_local.bat`
 
-## Endpoint Base
+## Endpoints
 
 - `POST /api/v1/downloads`
 - `GET /api/v1/downloads/{download_id}`
 - `POST /api/v1/downloads/{download_id}/cancel`
+- `POST /api/v1/downloads/{download_id}/file-token`
+- `GET /api/v1/downloads/{download_id}/file?token=...`
+- `GET /healthz`
+- `GET /livez`
+- `GET /readyz`
+- `GET /metrics`
 
 ## Fluxo Assincrono
 
-1. O `POST /downloads` valida autorizacao e enfileira um job.
+1. `POST /downloads` valida autorizacao e enfileira um job.
 2. A resposta retorna `download_id` e `queue_status`.
-3. O worker in-process processa o job com retry exponencial.
-4. O cliente consulta `GET /downloads/{download_id}` para acompanhar o status.
-5. O endpoint `POST /downloads/{download_id}/cancel` suporta cancelamento cooperativo para jobs em `queued` e `processing`.
+3. Worker processa o job com retry exponencial.
+4. Cliente consulta `GET /downloads/{download_id}` para acompanhar status.
+5. `POST /downloads/{download_id}/cancel` suporta cancelamento cooperativo em `queued` e `processing`.
+6. Quando `completed`, o cliente pode gerar token curto para baixar o arquivo.
 
-## Backend de Fila
+## Persistencia e Fila
 
-- Padrao: `in_process` (custo zero, sem dependencia externa).
-- Opcional: `redis` (open-source, configurado por variaveis de ambiente).
-- Fallback automatico: se Redis nao estiver disponivel, o sistema volta para `in_process`.
+- Repositorio de jobs:
+	- Padrao: `sqlite` (arquivo local, duravel entre reinicios).
+	- Opcional: `in_memory` (volatil, util para testes).
+- Fila:
+	- Padrao: `in_process`.
+	- Opcional: `redis`.
+	- Fallback automatico para `in_process` se Redis indisponivel.
+
+## Seguranca Operacional
+
+- API key opcional para rotas de download (`API_KEY`).
+- Rate limit por `requester_id` configuravel por janela.
+- Token de arquivo assinado com TTL curto para download final.
+- Mensagem publica de erro operacional unica para frontend.
 
 ## Download Real por URL Autorizada
 
-- O backend suporta download real quando `video_reference` recebe uma URL HTTP/HTTPS autorizada (ex.: link assinado obtido pelo proprio usuario no provedor).
-- O arquivo e salvo localmente no diretorio configurado por `DOWNLOAD_OUTPUT_DIR`.
-- Opcionalmente, limite hosts permitidos com `ALLOWED_SOURCE_HOSTS` (lista separada por virgula).
-- Para plataformas como YouTube/Instagram/TikTok, o projeto usa extractor open-source opcional (`yt-dlp`) para links publicos.
+- Suporta download real quando `video_reference` recebe URL HTTP/HTTPS autorizada.
+- Arquivo salvo em `DOWNLOAD_OUTPUT_DIR`.
+- Opcionalmente restrito por `ALLOWED_SOURCE_HOSTS`.
+- Para YouTube/Instagram/TikTok e similares, utiliza extractor opcional (`yt-dlp`) quando habilitado.
 
 Exemplo de payload:
 
@@ -73,6 +95,7 @@ Exemplo de payload:
 	"video_reference": "https://seu-link-autorizado.exemplo/video.mp4",
 	"requester_id": "user-123",
 	"download_id": "dl-real-001",
+	"quality_preference": "best",
 	"authorization": {
 		"session_proof": "abcdefgh",
 		"entitlement_proof": "ijklmnop"

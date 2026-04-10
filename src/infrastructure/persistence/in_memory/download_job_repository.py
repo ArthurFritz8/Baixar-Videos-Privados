@@ -1,10 +1,12 @@
 from dataclasses import replace
+from datetime import datetime
 from threading import RLock
 
+from src.application.ports.download_job_repository_port import DownloadJobRepositoryPort
 from src.domain.entities.download_job import DownloadJob
 
 
-class InMemoryDownloadJobRepository:
+class InMemoryDownloadJobRepository(DownloadJobRepositoryPort):
     def __init__(self) -> None:
         self._jobs: dict[str, DownloadJob] = {}
         self._lock = RLock()
@@ -87,3 +89,37 @@ class InMemoryDownloadJobRepository:
             updated = job.to_canceled(error_code=error_code)
             self._jobs[download_id] = updated
             return replace(updated)
+
+    def prune_terminal_jobs(self, older_than: datetime) -> list[str]:
+        removable_ids: list[str] = []
+        removable_artifacts: list[str] = []
+        with self._lock:
+            for download_id, job in self._jobs.items():
+                if (
+                    job.queue_status in ("completed", "failed", "canceled")
+                    and job.updated_at < older_than
+                ):
+                    removable_ids.append(download_id)
+                    if job.artifact_location:
+                        removable_artifacts.append(job.artifact_location)
+
+            for download_id in removable_ids:
+                self._jobs.pop(download_id, None)
+
+        return removable_artifacts
+
+    def count_by_status(self) -> dict[str, int]:
+        counters = {
+            "queued": 0,
+            "processing": 0,
+            "completed": 0,
+            "failed": 0,
+            "canceled": 0,
+        }
+        with self._lock:
+            for job in self._jobs.values():
+                counters[job.queue_status] = counters.get(job.queue_status, 0) + 1
+        return counters
+
+    def ping(self) -> bool:
+        return True

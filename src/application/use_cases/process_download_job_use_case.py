@@ -1,11 +1,10 @@
 import asyncio
 from urllib.parse import urlparse
 
+from src.application.ports.download_job_repository_port import DownloadJobRepositoryPort
 from src.application.ports.provider_port import ProviderDownloadRequest
 from src.application.services.provider_registry import ProviderRegistry
-from src.infrastructure.persistence.in_memory.download_job_repository import (
-    InMemoryDownloadJobRepository,
-)
+from src.infrastructure.observability.metrics_registry import MetricsRegistry
 from src.infrastructure.storage.local.authorized_artifact_downloader import (
     AuthorizedArtifactDownloader,
 )
@@ -19,9 +18,10 @@ class ProcessDownloadJobUseCase:
     def __init__(
         self,
         provider_registry: ProviderRegistry,
-        download_job_repository: InMemoryDownloadJobRepository,
+        download_job_repository: DownloadJobRepositoryPort,
         artifact_downloader: AuthorizedArtifactDownloader,
         platform_extractor_downloader: PlatformExtractorDownloader,
+        metrics_registry: MetricsRegistry,
         public_failure_message: str,
         retry_max_attempts: int,
         retry_base_delay_seconds: float,
@@ -30,6 +30,7 @@ class ProcessDownloadJobUseCase:
         self._download_job_repository = download_job_repository
         self._artifact_downloader = artifact_downloader
         self._platform_extractor_downloader = platform_extractor_downloader
+        self._metrics_registry = metrics_registry
         self._public_failure_message = public_failure_message
         self._retry_max_attempts = retry_max_attempts
         self._retry_base_delay_seconds = retry_base_delay_seconds
@@ -57,6 +58,7 @@ class ProcessDownloadJobUseCase:
                     ProviderDownloadRequest(
                         provider=job.provider,
                         video_reference=job.video_reference,
+                        quality_preference=job.quality_preference,
                         requester_id=job.requester_id,
                         session_proof=job.session_proof,
                         entitlement_proof=job.entitlement_proof,
@@ -75,6 +77,7 @@ class ProcessDownloadJobUseCase:
                             await self._platform_extractor_downloader.download(
                                 source_url=resolved_artifact_location,
                                 download_id=download_id,
+                                quality_preference=job.quality_preference,
                             )
                         )
                     else:
@@ -91,6 +94,7 @@ class ProcessDownloadJobUseCase:
                     artifact_location=resolved_artifact_location,
                     attempt_count=attempt,
                 )
+                self._metrics_registry.inc_counter("jobs_completed_total")
                 return
             except AppError as exc:
                 if self._is_canceled(download_id):
@@ -103,6 +107,7 @@ class ProcessDownloadJobUseCase:
                         error_code=exc.code,
                         attempt_count=attempt,
                     )
+                    self._metrics_registry.inc_counter("jobs_failed_total")
                     return
                 await asyncio.sleep(self._retry_base_delay_seconds * (2 ** (attempt - 1)))
             except Exception:
@@ -114,6 +119,7 @@ class ProcessDownloadJobUseCase:
                     error_code="DOWNLOAD_FAILED",
                     attempt_count=attempt,
                 )
+                self._metrics_registry.inc_counter("jobs_failed_total")
                 return
 
     def _is_canceled(self, download_id: str) -> bool:
