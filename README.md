@@ -80,6 +80,13 @@ Use somente para conteudos com autorizacao legitima do titular e em conformidade
 - Token de arquivo assinado com TTL curto para download final.
 - Mensagem publica de erro operacional unica para frontend.
 
+### Perfil de Hardening Recomendado
+
+- `REQUESTER_RATE_LIMIT_MAX_REQUESTS=12` com `REQUESTER_RATE_LIMIT_WINDOW_SECONDS=60`.
+- `DOWNLOAD_FILE_TOKEN_TTL_SECONDS=120`.
+- `ALLOWED_SOURCE_HOSTS` predefinido com hosts sociais comuns e localhost.
+- Para uso real com links privados (Panda/Hotmart/CDN), adicione explicitamente os dominios do seu ambiente em `ALLOWED_SOURCE_HOSTS`.
+
 ## Download Real por URL Autorizada
 
 - Suporta download real quando `video_reference` recebe URL HTTP/HTTPS autorizada.
