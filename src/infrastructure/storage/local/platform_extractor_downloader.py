@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from src.shared.exceptions.errors import SourceDownloadFailedError
 
@@ -65,6 +65,7 @@ class PlatformExtractorDownloader:
             ) from exc
 
         self._output_dir.mkdir(parents=True, exist_ok=True)
+        resolved_source_url = self._resolve_source_url(source_url)
         output_template = str(self._output_dir / f"{download_id}.%(ext)s")
 
         ydl_opts = {
@@ -81,14 +82,17 @@ class PlatformExtractorDownloader:
 
         def _run_extract() -> None:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.extract_info(source_url, download=True)
+                ydl.extract_info(resolved_source_url, download=True)
 
         try:
             await asyncio.to_thread(_run_extract)
         except Exception as exc:
             raise SourceDownloadFailedError(
                 public_message=self._public_failure_message,
-                internal_detail=f"platform_extractor_error={exc}",
+                internal_detail=(
+                    "platform_extractor_error="
+                    f"{exc} source_url={resolved_source_url}"
+                ),
             ) from exc
 
         candidates = [
@@ -104,6 +108,22 @@ class PlatformExtractorDownloader:
 
         candidates.sort(key=lambda item: item.stat().st_mtime, reverse=True)
         return str(candidates[0])
+
+    @staticmethod
+    def _resolve_source_url(source_url: str) -> str:
+        normalized_source_url = source_url.replace("&amp;", "&")
+        parsed = urlparse(normalized_source_url)
+        host = (parsed.hostname or "").lower()
+
+        if "pandavideo.com.br" not in host:
+            return normalized_source_url
+
+        if parsed.path.rstrip("/").endswith("/embed"):
+            video_id = parse_qs(parsed.query).get("v", [""])[0].strip()
+            if video_id:
+                return f"{parsed.scheme}://{parsed.netloc}/{video_id}/playlist.m3u8"
+
+        return normalized_source_url
 
     @staticmethod
     def _resolve_format(quality_preference: str) -> str:
