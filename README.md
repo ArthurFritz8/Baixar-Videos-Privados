@@ -59,6 +59,7 @@ Observacao:
 2. Configure `API Base`, `API Prefix`, `Header API Key` e `API Key` no popup.
 3. Abra a pagina com o video/link autorizado e clique em `Baixar Aba Atual`.
 4. Cada clique gera `download_id` unico automaticamente para evitar reaproveitar status antigo.
+5. Em paginas de curso, a extensao tenta detectar automaticamente o link real do player (iframe/video) antes de enviar para a API.
 
 Guia detalhado: `integrations/browser-extension/README.md`.
 

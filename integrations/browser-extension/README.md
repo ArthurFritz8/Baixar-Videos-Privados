@@ -38,4 +38,5 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
 
 - Se `Provider` estiver em `auto`, a extensao tenta inferir por dominio.
 - Se o dominio nao for reconhecido, usa `panda_video` como fallback.
-- A extensao nao intercepta trafego interno da pagina; ela usa a URL da aba ativa.
+- A extensao tenta detectar automaticamente URL real de midia no DOM da pagina ativa (`iframe`, `video`, `source`, `data-*` e links no HTML).
+- Em paginas de curso, quando houver embed de player, a extensao tende a usar o link do player em vez da URL da pagina.

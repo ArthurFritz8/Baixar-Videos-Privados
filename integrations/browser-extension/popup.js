@@ -78,19 +78,25 @@ async function runDownloadFromActiveTab() {
       throw new Error("A aba ativa nao possui URL HTTP/HTTPS valida.");
     }
 
+    const resolvedReference = await resolveVideoReference(tab);
+
     const provider =
       settings.providerOverride === "auto"
-        ? inferProvider(tab.url)
+        ? inferProvider(resolvedReference.videoReference)
         : settings.providerOverride;
     const generatedDownloadId = `dl-browser-${Date.now().toString(36)}-${randomHex(8)}`;
 
     appendStatus(`Aba ativa: ${tab.url}`);
+    appendStatus(`Referencia usada: ${resolvedReference.videoReference}`);
+    if (resolvedReference.source !== "tab-url") {
+      appendStatus(`Fonte detectada: ${resolvedReference.source}`);
+    }
     appendStatus(`Provider resolvido: ${provider}`);
     appendStatus(`download_id gerado: ${generatedDownloadId}`);
 
     const createPayload = {
       provider,
-      video_reference: tab.url,
+      video_reference: resolvedReference.videoReference,
       download_id: generatedDownloadId,
       quality_preference: settings.qualityPreference,
       requester_id: settings.requesterId,
@@ -136,7 +142,7 @@ async function runDownloadFromActiveTab() {
     const blob = await fileResponse.blob();
     const suggestedName = resolveFilename(
       fileResponse.headers.get("content-disposition"),
-      tab.url,
+      resolvedReference.videoReference,
       downloadId
     );
     await downloadBlob(blob, suggestedName, settings.saveAs);
@@ -291,6 +297,191 @@ function getActiveTab() {
       resolve(tabs[0]);
     });
   });
+}
+
+async function resolveVideoReference(tab) {
+  if (!tab.id) {
+    return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
+  }
+
+  try {
+    const extracted = await extractVideoReferenceFromDom(tab.id);
+    if (extracted && extracted.url) {
+      return {
+        videoReference: extracted.url,
+        source: extracted.source || "dom",
+        candidatesCount: extracted.candidatesCount || 1,
+      };
+    }
+  } catch (error) {
+    appendStatus(`Aviso: nao foi possivel extrair midia da pagina (${error.message}).`);
+  }
+
+  return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
+}
+
+async function extractVideoReferenceFromDom(tabId) {
+  const results = await new Promise((resolve, reject) => {
+    chrome.scripting.executeScript(
+      {
+        target: { tabId },
+        func: () => {
+          const mediaHostHints = [
+            "pandavideo.com.br",
+            "youtube.com",
+            "youtu.be",
+            "vimeo.com",
+            "tiktok.com",
+            "instagram.com",
+            "facebook.com",
+            "twitter.com",
+            "x.com",
+          ];
+
+          const likelyMedia = (value) => {
+            const lower = value.toLowerCase();
+            return (
+              mediaHostHints.some((hint) => lower.includes(hint)) ||
+              lower.includes(".m3u8") ||
+              lower.includes(".mp4") ||
+              lower.includes("playlist")
+            );
+          };
+
+          const scoreCandidate = (url, source) => {
+            const lower = url.toLowerCase();
+            let score = 0;
+
+            if (lower.includes("pandavideo.com.br")) {
+              score += 120;
+            }
+            if (lower.includes("youtube.com") || lower.includes("youtu.be")) {
+              score += 100;
+            }
+            if (lower.includes(".m3u8") || lower.includes("playlist.m3u8")) {
+              score += 160;
+            }
+            if (lower.includes(".mp4")) {
+              score += 130;
+            }
+            if (lower.includes("/embed")) {
+              score += 40;
+            }
+            if (source.startsWith("iframe")) {
+              score += 25;
+            }
+            if (source.startsWith("video") || source.startsWith("source")) {
+              score += 35;
+            }
+            if (url === window.location.href) {
+              score -= 40;
+            }
+
+            return score;
+          };
+
+          const seen = new Set();
+          const candidates = [];
+          const addCandidate = (rawValue, source) => {
+            if (!rawValue) {
+              return;
+            }
+
+            const normalized = String(rawValue).trim().replace(/&amp;/gi, "&");
+            if (!normalized) {
+              return;
+            }
+
+            let absolute;
+            try {
+              absolute = new URL(normalized, window.location.href).toString();
+            } catch {
+              return;
+            }
+
+            if (!/^https?:\/\//i.test(absolute)) {
+              return;
+            }
+
+            if (!likelyMedia(absolute)) {
+              return;
+            }
+
+            if (seen.has(absolute)) {
+              return;
+            }
+
+            seen.add(absolute);
+            candidates.push({
+              url: absolute,
+              source,
+              score: scoreCandidate(absolute, source),
+            });
+          };
+
+          addCandidate(window.location.href, "tab.url");
+
+          for (const iframe of document.querySelectorAll("iframe[src]")) {
+            addCandidate(iframe.getAttribute("src"), "iframe.src");
+          }
+
+          for (const video of document.querySelectorAll("video[src]")) {
+            addCandidate(video.getAttribute("src"), "video.src");
+          }
+
+          for (const source of document.querySelectorAll("video source[src], source[src]")) {
+            addCandidate(source.getAttribute("src"), "source.src");
+          }
+
+          for (const node of document.querySelectorAll("[data-src], [data-url], [data-video], [data-iframe]")) {
+            addCandidate(node.getAttribute("data-src"), "data-src");
+            addCandidate(node.getAttribute("data-url"), "data-url");
+            addCandidate(node.getAttribute("data-video"), "data-video");
+            addCandidate(node.getAttribute("data-iframe"), "data-iframe");
+          }
+
+          for (const anchor of document.querySelectorAll("a[href]")) {
+            addCandidate(anchor.getAttribute("href"), "a.href");
+          }
+
+          const html = document.documentElement ? document.documentElement.innerHTML : "";
+          const regex = /https?:\/\/[^\s"'<>]+/g;
+          for (const match of html.match(regex) || []) {
+            addCandidate(match, "html.regex");
+          }
+
+          if (!candidates.length) {
+            return {
+              url: null,
+              source: "none",
+              candidatesCount: 0,
+            };
+          }
+
+          candidates.sort((a, b) => b.score - a.score);
+          const selected = candidates[0];
+          return {
+            url: selected.url,
+            source: selected.source,
+            candidatesCount: candidates.length,
+          };
+        },
+      },
+      (executionResults) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve(executionResults || []);
+      }
+    );
+  });
+
+  if (!results.length || !results[0].result) {
+    return null;
+  }
+
+  return results[0].result;
 }
 
 function normalizeBaseUrl(baseUrl) {
