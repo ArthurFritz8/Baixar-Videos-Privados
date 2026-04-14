@@ -1,5 +1,7 @@
 import asyncio
+import os
 import re
+import shutil
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -90,6 +92,7 @@ class PlatformExtractorDownloader:
         self._output_dir.mkdir(parents=True, exist_ok=True)
         resolved_source_url = self._resolve_source_url(source_url)
         output_template = str(self._output_dir / f"{download_id}.%(ext)s")
+        ffmpeg_location = self._resolve_ffmpeg_location()
 
         ydl_opts = {
             "outtmpl": output_template,
@@ -106,6 +109,8 @@ class PlatformExtractorDownloader:
             "geo_bypass": True,
             "legacyserverconnect": True
         }
+        if ffmpeg_location:
+            ydl_opts["ffmpeg_location"] = ffmpeg_location
 
         def _run_extract() -> None:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -179,3 +184,20 @@ class PlatformExtractorDownloader:
             return "source_protected_by_cloudflare_antibot_challenge"
 
         return clean_value
+
+    @staticmethod
+    def _resolve_ffmpeg_location() -> str | None:
+        ffmpeg_path = shutil.which("ffmpeg")
+        if ffmpeg_path:
+            return str(Path(ffmpeg_path).resolve().parent)
+
+        local_app_data = os.getenv("LOCALAPPDATA")
+        if local_app_data:
+            winget_packages_dir = Path(local_app_data) / "Microsoft" / "WinGet" / "Packages"
+            if winget_packages_dir.exists():
+                for candidate in winget_packages_dir.glob(
+                    "Gyan.FFmpeg_*/*/bin/ffmpeg.exe"
+                ):
+                    return str(candidate.parent)
+
+        return None
