@@ -81,19 +81,9 @@ class PlatformExtractorDownloader:
             "nopart": True,
             "cachedir": False,
             "concurrent_fragment_downloads": self._concurrent_fragment_downloads,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "none",
-                "Sec-Fetch-User": "?1",
-                "Upgrade-Insecure-Requests": "1"
-            },
             "extractor_retries": 3,
             "geo_bypass": True,
-            "legacyserverconnect": True,
-            "impersonate": "chrome"
+            "legacyserverconnect": True
         }
 
         def _run_extract() -> None:
