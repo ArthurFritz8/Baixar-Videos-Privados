@@ -134,9 +134,6 @@ async function runDownloadFromActiveTab() {
 
     const finalStatus = await waitForTerminalStatus(settings, downloadId);
     if (finalStatus.queue_status !== "completed") {
-      if (finalStatus.diagnostic_detail) {
-        appendStatus(`Diagnostico API: ${finalStatus.diagnostic_detail}`);
-      }
       throw new Error(
         `Download finalizou com status ${finalStatus.queue_status} (code=${
           finalStatus.code || "n/a"
@@ -194,7 +191,10 @@ async function waitForTerminalStatus(settings, downloadId) {
       appendStatus(`queue_status=${body.queue_status}`);
 
       if (body.queue_status === "failed" && body.diagnostic_detail) {
-        appendStatus(`Diagnostico API: ${body.diagnostic_detail}`);
+        const diagnostic = formatDiagnosticDetail(body.diagnostic_detail);
+        if (diagnostic) {
+          appendStatus(`Diagnostico API: ${diagnostic}`);
+        }
       }
     }
 
@@ -245,6 +245,27 @@ function parseFilenameFromContentDisposition(contentDisposition) {
 
 function sanitizeFilename(value) {
   return value.replace(/[<>:"/\\|?*]+/g, "_").trim() || "download.bin";
+}
+
+function sanitizeDiagnosticDetail(value) {
+  return String(value || "")
+    .replace(/\x1b\[[0-9;]*m/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatDiagnosticDetail(value) {
+  const clean = sanitizeDiagnosticDetail(value);
+  if (!clean) {
+    return "";
+  }
+
+  const lower = clean.toLowerCase();
+  if (lower.includes("cloudflare anti-bot challenge")) {
+    return "Fonte protegida por desafio anti-bot (Cloudflare).";
+  }
+
+  return clean;
 }
 
 async function downloadBlob(blob, filename, saveAs) {

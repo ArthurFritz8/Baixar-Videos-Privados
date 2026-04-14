@@ -1,4 +1,5 @@
 import asyncio
+import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -113,11 +114,12 @@ class PlatformExtractorDownloader:
         try:
             await asyncio.to_thread(_run_extract)
         except Exception as exc:
+            normalized_error_detail = self._normalize_extractor_error_detail(str(exc))
             raise SourceDownloadFailedError(
                 public_message=self._public_failure_message,
                 internal_detail=(
                     "platform_extractor_error="
-                    f"{exc} source_url={resolved_source_url}"
+                    f"{normalized_error_detail} source_url={resolved_source_url}"
                 ),
             ) from exc
 
@@ -163,3 +165,17 @@ class PlatformExtractorDownloader:
         if normalized == "audio":
             return "bestaudio/best"
         return "best[vcodec!=none][acodec!=none]/best"
+
+    @staticmethod
+    def _strip_ansi(value: str) -> str:
+        return re.sub(r"\x1b\[[0-9;]*m", "", value or "").strip()
+
+    @classmethod
+    def _normalize_extractor_error_detail(cls, value: str) -> str:
+        clean_value = cls._strip_ansi(value)
+        lowered = clean_value.lower()
+
+        if "cloudflare anti-bot challenge" in lowered:
+            return "source_protected_by_cloudflare_antibot_challenge"
+
+        return clean_value
