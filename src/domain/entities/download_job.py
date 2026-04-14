@@ -35,6 +35,7 @@ class DownloadJob:
     attempt_count: int = 0
     artifact_location: str | None = None
     error_code: str | None = None
+    error_detail: str | None = None
 
     @classmethod
     def new(
@@ -62,7 +63,13 @@ class DownloadJob:
         )
 
     def to_processing(self) -> "DownloadJob":
-        return replace(self, queue_status="processing", updated_at=_utc_now(), error_code=None)
+        return replace(
+            self,
+            queue_status="processing",
+            updated_at=_utc_now(),
+            error_code=None,
+            error_detail=None,
+        )
 
     def to_completed(
         self,
@@ -75,14 +82,21 @@ class DownloadJob:
             artifact_location=artifact_location,
             attempt_count=attempt_count,
             error_code=None,
+            error_detail=None,
             updated_at=_utc_now(),
         )
 
-    def to_failed(self, error_code: str, attempt_count: int) -> "DownloadJob":
+    def to_failed(
+        self,
+        error_code: str,
+        attempt_count: int,
+        error_detail: str | None = None,
+    ) -> "DownloadJob":
         return replace(
             self,
             queue_status="failed",
             error_code=error_code,
+            error_detail=error_detail,
             attempt_count=attempt_count,
             updated_at=_utc_now(),
         )
@@ -92,5 +106,6 @@ class DownloadJob:
             self,
             queue_status="canceled",
             error_code=error_code,
+            error_detail=None,
             updated_at=_utc_now(),
         )

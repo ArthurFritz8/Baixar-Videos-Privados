@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     retention_cleanup_interval_seconds: int = 3600
     terminal_job_retention_hours: int = 24
     metrics_enabled: bool = True
+    expose_failure_diagnostic_detail: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

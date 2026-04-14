@@ -116,6 +116,7 @@ class ProcessDownloadJobUseCase:
                         download_id=download_id,
                         error_code=exc.code,
                         attempt_count=attempt,
+                        error_detail=exc.internal_detail,
                     )
                     self._metrics_registry.inc_counter("jobs_failed_total")
                     return
@@ -134,6 +135,7 @@ class ProcessDownloadJobUseCase:
                     download_id=download_id,
                     error_code="DOWNLOAD_FAILED",
                     attempt_count=attempt,
+                    error_detail=str(exc),
                 )
                 self._metrics_registry.inc_counter("jobs_failed_total")
                 return

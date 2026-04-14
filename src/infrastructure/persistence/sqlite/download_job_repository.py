@@ -38,10 +38,19 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                     updated_at TEXT NOT NULL,
                     attempt_count INTEGER NOT NULL,
                     artifact_location TEXT,
-                    error_code TEXT
+                    error_code TEXT,
+                    error_detail TEXT
                 )
                 """
             )
+
+            columns = {
+                str(row["name"]).lower()
+                for row in self._connection.execute("PRAGMA table_info(download_jobs)").fetchall()
+            }
+            if "error_detail" not in columns:
+                self._connection.execute("ALTER TABLE download_jobs ADD COLUMN error_detail TEXT")
+
             self._connection.commit()
 
     def _row_to_job(self, row: sqlite3.Row) -> DownloadJob:
@@ -59,6 +68,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
             attempt_count=int(row["attempt_count"]),
             artifact_location=row["artifact_location"],
             error_code=row["error_code"],
+            error_detail=row["error_detail"],
         )
 
     def create_if_absent(self, job: DownloadJob) -> tuple[DownloadJob, bool]:
@@ -82,8 +92,9 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                     updated_at,
                     attempt_count,
                     artifact_location,
-                    error_code
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    error_code,
+                    error_detail
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     job.download_id,
@@ -99,6 +110,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                     job.attempt_count,
                     job.artifact_location,
                     job.error_code,
+                    job.error_detail,
                 ),
             )
             self._connection.commit()
@@ -126,13 +138,14 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
             self._connection.execute(
                 """
                 UPDATE download_jobs
-                SET queue_status = ?, updated_at = ?, error_code = ?
+                SET queue_status = ?, updated_at = ?, error_code = ?, error_detail = ?
                 WHERE download_id = ?
                 """,
                 (
                     updated.queue_status,
                     updated.updated_at.isoformat(),
                     updated.error_code,
+                    updated.error_detail,
                     download_id,
                 ),
             )
@@ -163,6 +176,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                     artifact_location = ?,
                     attempt_count = ?,
                     error_code = ?,
+                    error_detail = ?,
                     updated_at = ?
                 WHERE download_id = ?
                 """,
@@ -171,6 +185,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                     updated.artifact_location,
                     updated.attempt_count,
                     updated.error_code,
+                    updated.error_detail,
                     updated.updated_at.isoformat(),
                     download_id,
                 ),
@@ -183,6 +198,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
         download_id: str,
         error_code: str,
         attempt_count: int,
+        error_detail: str | None = None,
     ) -> DownloadJob | None:
         with self._lock:
             job = self.get(download_id)
@@ -191,12 +207,17 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
             if job.queue_status in ("completed", "failed", "canceled"):
                 return job
 
-            updated = job.to_failed(error_code=error_code, attempt_count=attempt_count)
+            updated = job.to_failed(
+                error_code=error_code,
+                attempt_count=attempt_count,
+                error_detail=error_detail,
+            )
             self._connection.execute(
                 """
                 UPDATE download_jobs
                 SET queue_status = ?,
                     error_code = ?,
+                    error_detail = ?,
                     attempt_count = ?,
                     updated_at = ?
                 WHERE download_id = ?
@@ -204,6 +225,7 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
                 (
                     updated.queue_status,
                     updated.error_code,
+                    updated.error_detail,
                     updated.attempt_count,
                     updated.updated_at.isoformat(),
                     download_id,
@@ -224,12 +246,13 @@ class SQLiteDownloadJobRepository(DownloadJobRepositoryPort):
             self._connection.execute(
                 """
                 UPDATE download_jobs
-                SET queue_status = ?, error_code = ?, updated_at = ?
+                SET queue_status = ?, error_code = ?, error_detail = ?, updated_at = ?
                 WHERE download_id = ?
                 """,
                 (
                     updated.queue_status,
                     updated.error_code,
+                    updated.error_detail,
                     updated.updated_at.isoformat(),
                     download_id,
                 ),

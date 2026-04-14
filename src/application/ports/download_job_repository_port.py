@@ -32,6 +32,7 @@ class DownloadJobRepositoryPort(ABC):
         download_id: str,
         error_code: str,
         attempt_count: int,
+        error_detail: str | None = None,
     ) -> DownloadJob | None:
         raise NotImplementedError
 

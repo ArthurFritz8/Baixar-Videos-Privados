@@ -62,6 +62,7 @@ class DownloadStatusResponse(BaseModel):
     queue_status: Literal["queued", "processing", "completed", "failed", "canceled"]
     artifact_location: str | None = None
     code: str | None = None
+    diagnostic_detail: str | None = None
 
     model_config = ConfigDict(extra="forbid", strict=True)
 

@@ -235,6 +235,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     get_download_status_use_case = GetDownloadStatusUseCase(
         download_job_repository=download_job_repository,
         public_failure_message=resolved_settings.public_download_failure_message,
+        expose_failure_diagnostic_detail=resolved_settings.expose_failure_diagnostic_detail,
     )
     cancel_download_use_case = CancelDownloadUseCase(
         download_job_repository=download_job_repository,

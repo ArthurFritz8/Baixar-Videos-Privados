@@ -134,6 +134,9 @@ async function runDownloadFromActiveTab() {
 
     const finalStatus = await waitForTerminalStatus(settings, downloadId);
     if (finalStatus.queue_status !== "completed") {
+      if (finalStatus.diagnostic_detail) {
+        appendStatus(`Diagnostico API: ${finalStatus.diagnostic_detail}`);
+      }
       throw new Error(
         `Download finalizou com status ${finalStatus.queue_status} (code=${
           finalStatus.code || "n/a"
@@ -189,6 +192,10 @@ async function waitForTerminalStatus(settings, downloadId) {
     if (body.queue_status !== lastStatus) {
       lastStatus = body.queue_status;
       appendStatus(`queue_status=${body.queue_status}`);
+
+      if (body.queue_status === "failed" && body.diagnostic_detail) {
+        appendStatus(`Diagnostico API: ${body.diagnostic_detail}`);
+      }
     }
 
     if (TERMINAL_STATUSES.has(body.queue_status)) {

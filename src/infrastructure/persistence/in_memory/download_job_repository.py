@@ -64,6 +64,7 @@ class InMemoryDownloadJobRepository(DownloadJobRepositoryPort):
         download_id: str,
         error_code: str,
         attempt_count: int,
+        error_detail: str | None = None,
     ) -> DownloadJob | None:
         with self._lock:
             job = self._jobs.get(download_id)
@@ -73,7 +74,11 @@ class InMemoryDownloadJobRepository(DownloadJobRepositoryPort):
             if job.queue_status in ("completed", "failed", "canceled"):
                 return replace(job)
 
-            updated = job.to_failed(error_code=error_code, attempt_count=attempt_count)
+            updated = job.to_failed(
+                error_code=error_code,
+                attempt_count=attempt_count,
+                error_detail=error_detail,
+            )
             self._jobs[download_id] = updated
             return replace(updated)
 

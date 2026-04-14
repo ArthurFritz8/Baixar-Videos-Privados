@@ -8,9 +8,11 @@ class GetDownloadStatusUseCase:
         self,
         download_job_repository: DownloadJobRepositoryPort,
         public_failure_message: str,
+        expose_failure_diagnostic_detail: bool = True,
     ) -> None:
         self._download_job_repository = download_job_repository
         self._public_failure_message = public_failure_message
+        self._expose_failure_diagnostic_detail = expose_failure_diagnostic_detail
 
     async def execute(self, download_id: str) -> DownloadStatusResponse:
         job = self._download_job_repository.get(download_id)
@@ -29,6 +31,9 @@ class GetDownloadStatusUseCase:
                 queue_status=job.queue_status,
                 artifact_location=job.artifact_location,
                 code=job.error_code or "DOWNLOAD_FAILED",
+                diagnostic_detail=(
+                    job.error_detail if self._expose_failure_diagnostic_detail else None
+                ),
             )
 
         if job.queue_status == "completed":
