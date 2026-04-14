@@ -95,15 +95,6 @@ async function runDownloadFromActiveTab() {
       throw new Error("Referencia manual invalida. Use URL iniciando com http:// ou https://.");
     }
 
-    if (
-      resolvedReference.source === "tab-url" &&
-      !isLikelyDirectMediaReference(resolvedReference.videoReference)
-    ) {
-      throw new Error(
-        "Nao foi possivel detectar URL de midia na pagina ativa. Abra o player oficial em uma aba propria e tente novamente."
-      );
-    }
-
     const provider =
       settings.providerOverride === "auto"
         ? inferProvider(resolvedReference.videoReference)
