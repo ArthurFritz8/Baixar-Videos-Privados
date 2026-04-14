@@ -406,6 +406,12 @@ async function resolveVideoReference(tab) {
     return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
   }
 
+  const tabProvider = inferProvider(tab.url);
+  if (tabProvider !== "panda_video") {
+    appendStatus(`Suporte nativo detectado (${tabProvider}). Usando URL da aba diretamente.`);
+    return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
+  }
+
   try {
     const sniffedUrls = await new Promise((resolve) => {
       chrome.runtime.sendMessage({ action: "getVideoUrls", tabId: tab.id }, (response) => {
