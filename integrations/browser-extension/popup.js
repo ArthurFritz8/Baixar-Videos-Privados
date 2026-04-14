@@ -389,19 +389,8 @@ async function resolveVideoReference(tab) {
     appendStatus(`Aviso: falha ao checar camada de rede (${err.message}).`);
   }
 
-  try {
-    const extracted = await extractVideoReferenceFromDom(tab.id);
-    if (extracted && extracted.url) {
-      return {
-        videoReference: extracted.url,
-        source: extracted.source || "dom",
-        candidatesCount: extracted.candidatesCount || 1,
-      };
-    }
-  } catch (error) {
-    appendStatus(`Aviso: nao foi possivel extrair midia da pagina (${error.message}).`);
-  }
-
+  // Desativado: o yt-dlp agora fara o trabalho pesado a partir da URL da pagina.
+  // Evita coletar iframes inuteis ou redirects de propaganda como midia principal.
   return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
 }
 
