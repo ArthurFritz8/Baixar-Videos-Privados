@@ -375,6 +375,30 @@ async function resolveVideoReference(tab) {
   }
 
   try {
+    const sniffedUrls = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: "getVideoUrls", tabId: tab.id }, (response) => {
+        if (chrome.runtime.lastError || !response || !response.urls) {
+          resolve([]);
+        } else {
+          resolve(response.urls);
+        }
+      });
+    });
+
+    if (sniffedUrls.length > 0) {
+      appendStatus(`Rede: ${sniffedUrls.length} URL(s) de midia detectada(s) (.m3u8/.mp4).`);
+      // We take the first sniffed URL
+      return {
+        videoReference: sniffedUrls[0],
+        source: "network-sniffed",
+        candidatesCount: sniffedUrls.length,
+      };
+    }
+  } catch (err) {
+    appendStatus(`Aviso: falha ao checar camada de rede (${err.message}).`);
+  }
+
+  try {
     const extracted = await extractVideoReferenceFromDom(tab.id);
     if (extracted && extracted.url) {
       return {
