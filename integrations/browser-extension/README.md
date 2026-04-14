@@ -41,4 +41,5 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
 - A extensao tenta detectar automaticamente URL real de midia no DOM da pagina ativa (`iframe`, `video`, `source`, `data-*` e links no HTML).
 - Em paginas de curso, quando houver embed de player, a extensao tende a usar o link do player em vez da URL da pagina.
 - Links de compartilhamento social (ex.: `facebook.com/sharer.php`) sao ignorados para evitar selecao incorreta de referencia.
+- Links de share do `x.com`/`twitter.com` com `status` e rotas de logout/home tambem sao ignorados para evitar falso positivo.
 - Em caso de API fora do ar, o popup mostra mensagem explicita de falha de conexao com a URL da API.

@@ -338,6 +338,52 @@ async function extractVideoReferenceFromDom(tabId) {
             "x.com",
           ];
 
+          const socialHostHints = [
+            "facebook.com",
+            "twitter.com",
+            "x.com",
+            "linkedin.com",
+            "whatsapp.com",
+            "t.me",
+            "pinterest.com",
+          ];
+
+          const isSocialHost = (host) =>
+            socialHostHints.some((hint) => host === hint || host.endsWith(`.${hint}`));
+
+          const extractShareTarget = (value) => {
+            let parsed;
+            try {
+              parsed = new URL(value, window.location.href);
+            } catch {
+              return null;
+            }
+
+            const host = (parsed.hostname || "").toLowerCase();
+            if (!isSocialHost(host)) {
+              return null;
+            }
+
+            for (const key of ["u", "url", "target", "status", "text"]) {
+              const candidate = parsed.searchParams.get(key);
+              if (!candidate) {
+                continue;
+              }
+
+              try {
+                const decoded = decodeURIComponent(candidate);
+                const absolute = new URL(decoded, window.location.href).toString();
+                if (/^https?:\/\//i.test(absolute) && absolute !== parsed.toString()) {
+                  return absolute;
+                }
+              } catch {
+                continue;
+              }
+            }
+
+            return null;
+          };
+
           const isShareOrRedirectUrl = (value) => {
             let parsed;
             try {
@@ -353,10 +399,21 @@ async function extractVideoReferenceFromDom(tabId) {
               parsed.searchParams.has("url") ||
               parsed.searchParams.has("target");
 
+            const hasShareTextParam =
+              parsed.searchParams.has("status") ||
+              parsed.searchParams.has("text");
+
+            if ((host === "x.com" || host.endsWith(".x.com")) && parsed.searchParams.has("logout")) {
+              return true;
+            }
+
             if (host.includes("facebook.com") && path.includes("/sharer")) {
               return true;
             }
             if ((host.includes("twitter.com") || host === "x.com" || host.endsWith(".x.com")) && path.includes("/intent/")) {
+              return true;
+            }
+            if ((host.includes("twitter.com") || host === "x.com" || host.endsWith(".x.com")) && (path === "/" || path === "/home" || path.startsWith("/home/")) && hasShareTextParam) {
               return true;
             }
             if (host.includes("linkedin.com") && path.includes("/share")) {
@@ -376,11 +433,37 @@ async function extractVideoReferenceFromDom(tabId) {
               return true;
             }
 
+            if (hasShareTextParam && (host.includes("twitter.com") || host.includes("x.com") || host.includes("facebook.com"))) {
+              return true;
+            }
+
             return false;
           };
 
           const likelyMedia = (value) => {
             const lower = value.toLowerCase();
+            let parsed;
+            try {
+              parsed = new URL(value, window.location.href);
+            } catch {
+              return false;
+            }
+
+            const host = (parsed.hostname || "").toLowerCase();
+            const path = (parsed.pathname || "").toLowerCase();
+
+            if (host.includes("facebook.com") || host.includes("twitter.com") || host === "x.com" || host.endsWith(".x.com")) {
+              return (
+                lower.includes(".m3u8") ||
+                lower.includes(".mp4") ||
+                path.includes("/video") ||
+                path.includes("/videos/") ||
+                path.includes("/watch") ||
+                path.includes("/status/") ||
+                path.includes("/embed")
+              );
+            }
+
             return (
               mediaHostHints.some((hint) => lower.includes(hint)) ||
               lower.includes(".m3u8") ||
@@ -445,6 +528,10 @@ async function extractVideoReferenceFromDom(tabId) {
             }
 
             if (isShareOrRedirectUrl(absolute)) {
+              const shareTarget = extractShareTarget(absolute);
+              if (shareTarget && shareTarget !== absolute) {
+                addCandidate(shareTarget, `${source}.share-target`);
+              }
               return;
             }
 
