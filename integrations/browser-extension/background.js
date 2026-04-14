@@ -3,8 +3,11 @@
 function isMediaUrl(url, type) {
     const lowerUrl = url.toLowerCase();
     
-    // Bloqueia com urgencia qualquer script js e os minusculos arquivos TS (.ts) que frustram downloads
-    if (lowerUrl.split("?")[0].endsWith(".ts") || lowerUrl.includes(".ts?") || lowerUrl.endsWith(".js") || lowerUrl.includes(".js?")) {
+    // Extrai apenas o caminho principal da URL (sem query string par incertezas como .js&xyz=)
+    const urlPath = lowerUrl.split("?")[0];
+
+    // Bloqueia com urgencia qualquer script js, css, legendas e os minusculos arquivos TS (.ts) que frustram downloads
+    if (urlPath.endsWith(".ts") || urlPath.endsWith(".js") || urlPath.endsWith(".css") || urlPath.endsWith(".vtt") || urlPath.endsWith(".png") || urlPath.endsWith(".jpg")) {
         return false;
     }
 

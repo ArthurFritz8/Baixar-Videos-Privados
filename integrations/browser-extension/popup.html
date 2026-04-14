@@ -89,11 +89,13 @@
         <button id="downloadBtn" type="button" class="primary">Baixar Aba Atual</button>
       </div>
 
-      <div id="sniffedPanel" style="display:none; margin-top:1rem; padding:10px; background:#f4f4f4; border:1px solid #ccc; border-radius:5px;">
-        <h3 style="margin-top:0; font-size:14px; text-transform:uppercase;">📹 Links Detectados na Rede</h3>
-        <p style="font-size:12px; margin:5px 0;">O site bloqueia F12, mas listamos os videos interceptados abaixo. Clique num deles para preencher no botão "Referencia manual":</p>
-        <ul id="sniffedList" style="list-style:none; padding:0; margin:0;font-size:11px;"></ul>
-      </div>
+      <details id="sniffedPanel" style="display:none; margin-top:1rem; padding:10px; background:#f4f4f4; border:1px solid #ccc; border-radius:5px;">
+        <summary style="font-size:14px; text-transform:uppercase; font-weight:bold; cursor:pointer;">📹 Links Detectados na Rede (Expandir)</summary>
+        <p style="font-size:12px; margin:10px 0 5px 0;">O site bloqueia F12, mas listamos os videos interceptados abaixo. Clique num deles para preencher no botão "Referencia manual":</p>
+        <div style="max-height: 150px; overflow-y: auto; background: #fff; border: 1px solid #ddd; padding: 5px;">
+          <ul id="sniffedList" style="list-style:none; padding:0; margin:0;font-size:11px; word-wrap: break-word;"></ul>
+        </div>
+      </details>
 
       <p id="activeTabUrl" class="tab-url">Aba atual: carregando...</p>
       <pre id="status" class="status" aria-live="polite"></pre>
