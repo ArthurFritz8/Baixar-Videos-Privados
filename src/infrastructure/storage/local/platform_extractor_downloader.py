@@ -60,6 +60,8 @@ class PlatformExtractorDownloader:
 
         try:
             import yt_dlp
+            from urllib.request import Request
+            from yt_dlp.utils.networking import CustomTarget
         except Exception as exc:
             raise SourceDownloadFailedError(
                 public_message=self._public_failure_message,
@@ -92,7 +94,8 @@ class PlatformExtractorDownloader:
             },
             "extractor_retries": 3,
             "geo_bypass": True,
-            "legacyserverconnect": True
+            "legacyserverconnect": True,
+            "impersonate": CustomTarget.CHROME
         }
 
         def _run_extract() -> None:
