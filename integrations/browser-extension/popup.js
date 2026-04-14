@@ -40,6 +40,8 @@ const ui = {
   downloadBtn: document.getElementById("downloadBtn"),
   activeTabUrl: document.getElementById("activeTabUrl"),
   status: document.getElementById("status"),
+  sniffedPanel: document.getElementById("sniffedPanel"),
+  sniffedList: document.getElementById("sniffedList"),
 };
 
 init().catch((error) => {
@@ -50,6 +52,7 @@ async function init() {
   const settings = await getSettings();
   writeForm(settings);
   await renderActiveTab();
+  await renderSniffedPanel();
 
   ui.saveBtn.addEventListener("click", async () => {
     try {
@@ -358,6 +361,44 @@ function getActiveTab() {
       resolve(tabs[0]);
     });
   });
+}
+
+async function renderSniffedPanel() {
+  try {
+    const tab = await getActiveTab();
+    if (!tab || !tab.id) return;
+
+    chrome.runtime.sendMessage({ action: "getVideoUrls", tabId: tab.id }, (response) => {
+      if (!chrome.runtime.lastError && response && response.urls && response.urls.length > 0) {
+        ui.sniffedPanel.style.display = "block";
+        ui.sniffedList.innerHTML = "";
+        
+        response.urls.forEach(url => {
+          const li = document.createElement("li");
+          li.style.marginBottom = "8px";
+          li.style.wordBreak = "break-all";
+          
+          const alink = document.createElement("a");
+          alink.href = "#";
+          alink.textContent = url;
+          alink.style.color = "#0052cc";
+          alink.addEventListener("click", (e) => {
+            e.preventDefault();
+            ui.manualVideoReference.value = url;
+            ui.manualVideoReference.style.backgroundColor = "#e6ffe6";
+            setTimeout(() => { ui.manualVideoReference.style.backgroundColor = ""; }, 500);
+            appendStatus("Referencia copiada com sucesso para o input! Clique em baixar.");
+          });
+          
+          li.appendChild(alink);
+          ui.sniffedList.appendChild(li);
+        });
+      }
+    });
+
+  } catch (err) {
+    console.error("Falha ao abrir sniff panel", err);
+  }
 }
 
 async function resolveVideoReference(tab) {
