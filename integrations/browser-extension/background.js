@@ -1,20 +1,34 @@
 // background.js
 
-let videoUrls = {};
+function isMediaUrl(url, type) {
+    if (type === "media") return true;
+    if (url.includes(".m3u8") || url.includes(".mp4") || url.includes(".ts") || url.includes(".m4a") || url.includes("/manifest")) return true;
+    return false;
+}
+
+function saveUrlForTab(tabId, url) {
+    if (tabId < 0) return;
+    chrome.storage.local.get(["videoUrls"], (res) => {
+        let vUrls = res.videoUrls || {};
+        if (!vUrls[tabId]) vUrls[tabId] = [];
+        
+        // Mantém apenas os ultimos 20 links pra nao explodir storage
+        if (!vUrls[tabId].includes(url)) {
+            vUrls[tabId].push(url);
+            if (vUrls[tabId].length > 20) {
+                vUrls[tabId].shift(); // Remove oldest
+            }
+            chrome.storage.local.set({ videoUrls: vUrls });
+        }
+    });
+}
 
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
-        if (details.type === "media" || details.type === "xmlhttprequest" || details.url.includes(".m3u8") || details.url.includes(".mp4")) {
-            // Filter strictly to media extensions so we don't catch all random API JSONs
-            if (!details.url.includes(".m3u8") && !details.url.includes(".mp4")) {
-                return;
-            }
-            const tabId = details.tabId;
-            if (tabId >= 0) {
-                if (!videoUrls[tabId]) {
-                    videoUrls[tabId] = new Set();
-                }
-                videoUrls[tabId].add(details.url);
+        if (isMediaUrl(details.url, details.type)) {
+            // Ignorar tráfego de imagens ou scripts aleatorios que tentam fingir ser media
+            if (details.type !== "image" && details.type !== "script") {
+               saveUrlForTab(details.tabId, details.url);
             }
         }
     },
@@ -22,16 +36,11 @@ chrome.webRequest.onBeforeRequest.addListener(
     []
 );
 
+// Fallback extra pra headers
 chrome.webRequest.onHeadersReceived.addListener(
     function(details) {
-        if (details.type === "media" || details.url.includes(".m3u8") || details.url.includes(".mp4")) {
-            const tabId = details.tabId;
-            if (tabId >= 0) {
-                if (!videoUrls[tabId]) {
-                    videoUrls[tabId] = new Set();
-                }
-                videoUrls[tabId].add(details.url);
-            }
+        if (isMediaUrl(details.url, details.type)) {
+            saveUrlForTab(details.tabId, details.url);
         }
     },
     { urls: ["<all_urls>"] },
@@ -41,28 +50,46 @@ chrome.webRequest.onHeadersReceived.addListener(
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getVideoUrls") {
         const tabId = request.tabId;
-        const urls = videoUrls[tabId] ? Array.from(videoUrls[tabId]) : [];
-        sendResponse({ urls: urls });
+        chrome.storage.local.get(["videoUrls"], (res) => {
+            const vUrls = res.videoUrls || {};
+            sendResponse({ urls: vUrls[tabId] || [] });
+        });
+        return true; // async response
     } else if (request.action === "clearVideoUrls") {
         const tabId = request.tabId;
-        if (videoUrls[tabId]) {
-            delete videoUrls[tabId];
-        }
-        sendResponse({ success: true });
+        chrome.storage.local.get(["videoUrls"], (res) => {
+            const vUrls = res.videoUrls || {};
+            if (vUrls[tabId]) {
+                delete vUrls[tabId];
+                chrome.storage.local.set({ videoUrls: vUrls }, () => {
+                    sendResponse({ success: true });
+                });
+            } else {
+                sendResponse({ success: true });
+            }
+        });
+        return true;
     }
-    return true;
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
-    if (videoUrls[tabId]) {
-        delete videoUrls[tabId];
-    }
+    chrome.storage.local.get(["videoUrls"], (res) => {
+        let vUrls = res.videoUrls || {};
+        if (vUrls[tabId]) {
+            delete vUrls[tabId];
+            chrome.storage.local.set({ videoUrls: vUrls });
+        }
+    });
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
-    if (changeInfo.url) {
-        if (videoUrls[tabId]) {
-            delete videoUrls[tabId];
-        }
+    if (changeInfo.url) { // Navegou para nova página na mesma aba
+        chrome.storage.local.get(["videoUrls"], (res) => {
+            let vUrls = res.videoUrls || {};
+            if (vUrls[tabId]) {
+                delete vUrls[tabId];
+                chrome.storage.local.set({ videoUrls: vUrls });
+            }
+        });
     }
 });
