@@ -338,6 +338,47 @@ async function extractVideoReferenceFromDom(tabId) {
             "x.com",
           ];
 
+          const isShareOrRedirectUrl = (value) => {
+            let parsed;
+            try {
+              parsed = new URL(value, window.location.href);
+            } catch {
+              return false;
+            }
+
+            const host = (parsed.hostname || "").toLowerCase();
+            const path = (parsed.pathname || "").toLowerCase();
+            const hasTargetUrlParam =
+              parsed.searchParams.has("u") ||
+              parsed.searchParams.has("url") ||
+              parsed.searchParams.has("target");
+
+            if (host.includes("facebook.com") && path.includes("/sharer")) {
+              return true;
+            }
+            if ((host.includes("twitter.com") || host === "x.com" || host.endsWith(".x.com")) && path.includes("/intent/")) {
+              return true;
+            }
+            if (host.includes("linkedin.com") && path.includes("/share")) {
+              return true;
+            }
+            if (host.includes("whatsapp.com") && (path.includes("/send") || path.includes("/share"))) {
+              return true;
+            }
+            if (host.includes("t.me") && path.includes("/share")) {
+              return true;
+            }
+            if (host.includes("pinterest.com") && path.includes("/pin/create")) {
+              return true;
+            }
+
+            if (hasTargetUrlParam && (host.includes("facebook.com") || host.includes("twitter.com") || host.includes("x.com") || host.includes("linkedin.com") || host.includes("whatsapp.com"))) {
+              return true;
+            }
+
+            return false;
+          };
+
           const likelyMedia = (value) => {
             const lower = value.toLowerCase();
             return (
@@ -400,6 +441,10 @@ async function extractVideoReferenceFromDom(tabId) {
             }
 
             if (!/^https?:\/\//i.test(absolute)) {
+              return;
+            }
+
+            if (isShareOrRedirectUrl(absolute)) {
               return;
             }
 
@@ -515,11 +560,25 @@ async function requestRaw(settings, method, path, body) {
     headers[settings.apiKeyHeaderName] = settings.apiKey;
   }
 
-  const response = await fetchWithTimeout(url, {
-    method,
-    headers,
-    body: body === null ? undefined : JSON.stringify(body),
-  }, settings.requestTimeoutSeconds * 1000);
+  let response;
+  try {
+    response = await fetchWithTimeout(
+      url,
+      {
+        method,
+        headers,
+        body: body === null ? undefined : JSON.stringify(body),
+      },
+      settings.requestTimeoutSeconds * 1000
+    );
+  } catch (error) {
+    if (error && error.message === "Timeout da requisicao HTTP.") {
+      throw error;
+    }
+    throw new Error(
+      `Falha de conexao com a API em ${url}. Verifique se a API esta em execucao.`
+    );
+  }
 
   if (!response.ok) {
     let detail = response.statusText;
