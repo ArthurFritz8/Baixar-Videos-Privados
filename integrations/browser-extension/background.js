@@ -5,15 +5,27 @@ function isMediaUrl(url, type) {
     const lowerUrl = url.toLowerCase();
     if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".ts") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
     
-    // Captura absurdamente agressiva para sites obscuros: pega todo fetch/xhr que retorne dados binarios na querystring, ou contenha "player"
-    if (type === "xmlhttprequest" || type === "fetch" || type === "other") {
-        if (lowerUrl.includes("stream") || lowerUrl.includes("video") || lowerUrl.includes("playlist") || lowerUrl.includes("player")) return true;
-        // Pega tambem URLs com hls, dash...
-        if (lowerUrl.includes("hls") || lowerUrl.includes("dash")) return true;
+    // Captura toda query string suspeita
+    if (lowerUrl.includes("m3u8") || lowerUrl.includes("mp4") || lowerUrl.includes("token=") || lowerUrl.includes("hash=")) {
+        if (type !== "image" && type !== "stylesheet" && type !== "font") {
+            return true;
+        }
     }
     
-    // As vezes sites piratas instanciam o arquivo em Object/Blob ou usam subresource. Nao temos acesso direto a Blob pelo webRequest, mas tentemos pegar o ping
-    if (type === "sub_frame" && lowerUrl.includes("player")) return true;
+    // As vezes o videojas/jwplayer carrega o m3u8 internamente como fetch
+    if (type === "xmlhttprequest" || type === "fetch" || type === "other" || type === "sub_frame") {
+        if (lowerUrl.includes("stream") || lowerUrl.includes("video") || lowerUrl.includes("playlist") || lowerUrl.includes("player")) {
+            // Recusa explicitamente arquivos de scripts js puros como o ima.js que apareceu na sua print
+            if (!lowerUrl.endsWith(".js") && !lowerUrl.includes(".js?")) {
+                return true;
+            }
+        }
+        if (lowerUrl.includes("hls") || lowerUrl.includes("dash")) {
+            if (!lowerUrl.endsWith(".js") && !lowerUrl.includes(".js?")) {
+                return true;
+            }
+        }
+    }
     
     return false;
 }
@@ -24,10 +36,10 @@ function saveUrlForTab(tabId, url) {
         let vUrls = res.videoUrls || {};
         if (!vUrls[tabId]) vUrls[tabId] = [];
         
-        // Mantém apenas os ultimos 30 links agora q seremos mais agressivos
+        // Mantém apenas os ultimos 40 links 
         if (!vUrls[tabId].includes(url)) {
             vUrls[tabId].push(url);
-            if (vUrls[tabId].length > 30) {
+            if (vUrls[tabId].length > 40) {
                 vUrls[tabId].shift(); // Remove oldest
             }
             chrome.storage.local.set({ videoUrls: vUrls });
@@ -38,7 +50,7 @@ function saveUrlForTab(tabId, url) {
 chrome.webRequest.onBeforeRequest.addListener(
     function(details) {
         if (isMediaUrl(details.url, details.type)) {
-            // Ignorar tráfego de imagens ou scripts aleatorios que tentam fingir ser media
+            // Ignorar script para nao floodar
             if (details.type !== "image" && details.type !== "script") {
                saveUrlForTab(details.tabId, details.url);
             }
