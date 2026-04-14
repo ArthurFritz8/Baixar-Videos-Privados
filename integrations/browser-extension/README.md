@@ -30,6 +30,7 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
    - API Prefix (padrao: `/api/v1`)
    - Header API Key (padrao: `X-API-Key`)
    - API Key (valor de `.env`)
+   - Referencia manual (opcional): URL do player/midia, usada quando auto-deteccao falhar
 3. Clique em `Salvar Config`.
 4. Abra uma aba com o video/link autorizado.
 5. Clique em `Baixar Aba Atual`.
@@ -44,3 +45,4 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
 - Links de share do `x.com`/`twitter.com` com `status` e rotas de logout/home tambem sao ignorados para evitar falso positivo.
 - Em caso de API fora do ar, o popup mostra mensagem explicita de falha de conexao com a URL da API.
 - Se a extensao nao encontrar URL real de midia, o fluxo para antes de chamar a API e orienta abrir o player oficial em aba propria.
+- Quando souber a URL do player/midia, preencha `Referencia manual` para pular auto-deteccao.

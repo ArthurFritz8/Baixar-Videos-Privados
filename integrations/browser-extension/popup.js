@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS = {
   apiKeyHeaderName: "X-API-Key",
   apiKey: "",
   requesterId: "browser-user",
+  manualVideoReference: "",
   providerOverride: "auto",
   qualityPreference: "best",
   pollIntervalSeconds: 1.0,
@@ -29,6 +30,7 @@ const ui = {
   apiKeyHeaderName: document.getElementById("apiKeyHeaderName"),
   apiKey: document.getElementById("apiKey"),
   requesterId: document.getElementById("requesterId"),
+  manualVideoReference: document.getElementById("manualVideoReference"),
   providerOverride: document.getElementById("providerOverride"),
   qualityPreference: document.getElementById("qualityPreference"),
   pollIntervalSeconds: document.getElementById("pollIntervalSeconds"),
@@ -78,7 +80,20 @@ async function runDownloadFromActiveTab() {
       throw new Error("A aba ativa nao possui URL HTTP/HTTPS valida.");
     }
 
-    const resolvedReference = await resolveVideoReference(tab);
+    const resolvedReference = settings.manualVideoReference
+      ? {
+          videoReference: settings.manualVideoReference,
+          source: "manual-input",
+          candidatesCount: 1,
+        }
+      : await resolveVideoReference(tab);
+
+    if (
+      settings.manualVideoReference &&
+      !/^https?:\/\//i.test(settings.manualVideoReference)
+    ) {
+      throw new Error("Referencia manual invalida. Use URL iniciando com http:// ou https://.");
+    }
 
     if (
       resolvedReference.source === "tab-url" &&
@@ -797,6 +812,7 @@ function readForm() {
     apiKeyHeaderName: ui.apiKeyHeaderName.value.trim() || "X-API-Key",
     apiKey: ui.apiKey.value.trim(),
     requesterId: ui.requesterId.value.trim() || "browser-user",
+    manualVideoReference: ui.manualVideoReference.value.trim(),
     providerOverride: ui.providerOverride.value,
     qualityPreference: ui.qualityPreference.value,
     pollIntervalSeconds: Number(ui.pollIntervalSeconds.value),
@@ -824,6 +840,7 @@ function writeForm(settings) {
   ui.apiKeyHeaderName.value = settings.apiKeyHeaderName;
   ui.apiKey.value = settings.apiKey;
   ui.requesterId.value = settings.requesterId;
+  ui.manualVideoReference.value = settings.manualVideoReference || "";
   ui.providerOverride.value = settings.providerOverride;
   ui.qualityPreference.value = settings.qualityPreference;
   ui.pollIntervalSeconds.value = String(settings.pollIntervalSeconds);
