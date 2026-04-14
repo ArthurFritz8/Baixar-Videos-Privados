@@ -2,7 +2,10 @@
 
 function isMediaUrl(url, type) {
     if (type === "media") return true;
-    if (url.includes(".m3u8") || url.includes(".mp4") || url.includes(".ts") || url.includes(".m4a") || url.includes("/manifest")) return true;
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".ts") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
+    // Captura tambem xhr/fetch com stream na query ou url pra sites que ofuscam
+    if (type === "xmlhttprequest" && (lowerUrl.includes("stream") || lowerUrl.includes("video") || lowerUrl.includes("playlist"))) return true;
     return false;
 }
 
