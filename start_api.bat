@@ -16,7 +16,7 @@ if /I "%MODE%"=="--check" (
   exit /b 0
 )
 
-set "PORT=8000"
+set "PORT=8010"
 if not "%START_API_PORT%"=="" set "PORT=%START_API_PORT%"
 
 set "PORT_PID="

@@ -26,7 +26,7 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
 
 1. Clique no icone da extensao.
 2. Preencha:
-   - API Base (ex.: `http://127.0.0.1:8000`)
+   - API Base (ex.: `http://127.0.0.1:8010`)
    - API Prefix (padrao: `/api/v1`)
    - Header API Key (padrao: `X-API-Key`)
    - API Key (valor de `.env`)
@@ -43,3 +43,4 @@ Esta extensao envia a aba ativa para a API local, acompanha o processamento e ba
 - Links de compartilhamento social (ex.: `facebook.com/sharer.php`) sao ignorados para evitar selecao incorreta de referencia.
 - Links de share do `x.com`/`twitter.com` com `status` e rotas de logout/home tambem sao ignorados para evitar falso positivo.
 - Em caso de API fora do ar, o popup mostra mensagem explicita de falha de conexao com a URL da API.
+- Se a extensao nao encontrar URL real de midia, o fluxo para antes de chamar a API e orienta abrir o player oficial em aba propria.

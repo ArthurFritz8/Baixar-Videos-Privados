@@ -1,5 +1,5 @@
 const DEFAULT_SETTINGS = {
-  apiBase: "http://127.0.0.1:8000",
+  apiBase: "http://127.0.0.1:8010",
   apiPrefix: "/api/v1",
   apiKeyHeaderName: "X-API-Key",
   apiKey: "",
@@ -79,6 +79,15 @@ async function runDownloadFromActiveTab() {
     }
 
     const resolvedReference = await resolveVideoReference(tab);
+
+    if (
+      resolvedReference.source === "tab-url" &&
+      !isLikelyDirectMediaReference(resolvedReference.videoReference)
+    ) {
+      throw new Error(
+        "Nao foi possivel detectar URL de midia na pagina ativa. Abra o player oficial em uma aba propria e tente novamente."
+      );
+    }
 
     const provider =
       settings.providerOverride === "auto"
@@ -263,6 +272,52 @@ function inferProvider(videoUrl) {
     return "panda_video";
   } catch {
     return "panda_video";
+  }
+}
+
+function isLikelyDirectMediaReference(videoUrl) {
+  try {
+    const parsed = new URL(videoUrl);
+    const host = (parsed.hostname || "").toLowerCase();
+    const path = (parsed.pathname || "").toLowerCase();
+    const href = videoUrl.toLowerCase();
+
+    if (
+      href.includes(".m3u8") ||
+      href.includes("playlist.m3u8") ||
+      href.includes(".mp4")
+    ) {
+      return true;
+    }
+
+    if (
+      path.includes("/embed") ||
+      path.includes("/watch") ||
+      path.includes("/videos/") ||
+      path.includes("/status/")
+    ) {
+      return true;
+    }
+
+    const knownMediaHosts = [
+      "pandavideo.com.br",
+      "youtube.com",
+      "youtu.be",
+      "vimeo.com",
+      "player.vimeo.com",
+      "facebook.com",
+      "fb.watch",
+      "tiktok.com",
+      "instagram.com",
+      "twitter.com",
+      "x.com",
+    ];
+
+    return knownMediaHosts.some((candidateHost) => {
+      return host === candidateHost || host.endsWith(`.${candidateHost}`);
+    });
+  } catch {
+    return false;
   }
 }
 
