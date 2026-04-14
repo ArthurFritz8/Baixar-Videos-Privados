@@ -1,18 +1,21 @@
 // background.js
 
 function isMediaUrl(url, type) {
-    if (type === "media") return true;
     const lowerUrl = url.toLowerCase();
-    if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
     
-    // Nao retorna true mais pro .ts pra evitar explodir a lista com os pedacos
-    if (lowerUrl.split("?")[0].endsWith(".ts")) {
+    // Bloqueia com urgencia qualquer script js e os minusculos arquivos TS (.ts) que frustram downloads
+    if (lowerUrl.split("?")[0].endsWith(".ts") || lowerUrl.includes(".ts?") || lowerUrl.endsWith(".js") || lowerUrl.includes(".js?")) {
         return false;
     }
+
+    if (type === "media") return true;
+    
+    // Master playlists
+    if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
     
     // Captura toda query string suspeita
-    if (lowerUrl.includes("m3u8") || lowerUrl.includes("mp4") || lowerUrl.includes("token=") || lowerUrl.includes("hash=")) {
-        if (type !== "image" && type !== "stylesheet" && type !== "font") {
+    if (lowerUrl.includes("token=") || lowerUrl.includes("hash=")) {
+        if (type !== "image" && type !== "stylesheet" && type !== "font" && type !== "script") {
             return true;
         }
     }
@@ -20,15 +23,10 @@ function isMediaUrl(url, type) {
     // As vezes o videojas/jwplayer carrega o m3u8 internamente como fetch
     if (type === "xmlhttprequest" || type === "fetch" || type === "other" || type === "sub_frame") {
         if (lowerUrl.includes("stream") || lowerUrl.includes("video") || lowerUrl.includes("playlist") || lowerUrl.includes("player")) {
-            // Recusa explicitamente arquivos de scripts js puros como o ima.js que apareceu na sua print
-            if (!lowerUrl.endsWith(".js") && !lowerUrl.includes(".js?")) {
-                return true;
-            }
+            return true;
         }
         if (lowerUrl.includes("hls") || lowerUrl.includes("dash")) {
-            if (!lowerUrl.endsWith(".js") && !lowerUrl.includes(".js?")) {
-                return true;
-            }
+            return true;
         }
     }
     
