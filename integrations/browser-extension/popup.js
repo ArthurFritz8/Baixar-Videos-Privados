@@ -284,6 +284,79 @@ function inferProvider(videoUrl) {
   }
 }
 
+function getSniffedUrlPath(videoUrl) {
+  try {
+    return (new URL(videoUrl).pathname || "").toLowerCase();
+  } catch {
+    return String(videoUrl || "").toLowerCase().split("?")[0];
+  }
+}
+
+function isBlockedSniffedUrl(videoUrl) {
+  const href = String(videoUrl || "").toLowerCase();
+  const path = getSniffedUrlPath(videoUrl);
+
+  const blockedExtensions = [
+    ".ts", ".m4s", ".js", ".css", ".vtt", ".srt", ".ass", ".json", ".xml",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".map"
+  ];
+  if (blockedExtensions.some((ext) => path.endsWith(ext))) {
+    return true;
+  }
+
+  const blockedTokens = [
+    "timedtext", "subtitle", "caption", "doubleclick", "googlesyndication", "googleads",
+    "videojs.ads", "ima", "vast", "vmap", "adservice", "analytics", "tracker"
+  ];
+  if (blockedTokens.some((token) => href.includes(token))) {
+    return true;
+  }
+
+  if ((path.includes("/segment") || path.includes("/chunk") || path.includes("/frag")) && !href.includes(".m3u8")) {
+    return true;
+  }
+
+  return false;
+}
+
+function scoreSniffedUrl(videoUrl) {
+  if (isBlockedSniffedUrl(videoUrl)) {
+    return -1000;
+  }
+
+  const href = String(videoUrl || "").toLowerCase();
+  const path = getSniffedUrlPath(videoUrl);
+  let score = 0;
+
+  if (href.includes("master.m3u8")) score += 400;
+  if (href.includes(".m3u8")) score += 300;
+  if (href.includes("playlist")) score += 140;
+  if (href.includes("/manifest") || href.includes("manifest")) score += 140;
+  if (href.includes(".mpd")) score += 220;
+  if (href.includes(".mp4")) score += 160;
+  if (href.includes("hls") || href.includes("dash")) score += 90;
+  if (href.includes("token=") || href.includes("hash=") || href.includes("signature=") || href.includes("expires=")) score += 40;
+
+  if ((path.includes("/segment") || path.includes("/chunk") || path.includes("/frag")) && !href.includes(".m3u8")) {
+    score -= 500;
+  }
+
+  return score;
+}
+
+function rankSniffedUrls(urls) {
+  const uniqueUrls = Array.from(new Set((urls || []).filter(Boolean).map((item) => String(item).trim())));
+
+  return uniqueUrls
+    .map((url) => ({
+      url,
+      score: scoreSniffedUrl(url),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.url);
+}
+
 function isLikelyDirectMediaReference(videoUrl) {
   try {
     const parsed = new URL(videoUrl);
@@ -370,10 +443,17 @@ async function renderSniffedPanel() {
 
     chrome.runtime.sendMessage({ action: "getVideoUrls", tabId: tab.id }, (response) => {
       if (!chrome.runtime.lastError && response && response.urls && response.urls.length > 0) {
+        const rankedUrls = rankSniffedUrls(response.urls);
+        if (rankedUrls.length === 0) {
+          ui.sniffedPanel.style.display = "none";
+          ui.sniffedList.innerHTML = "";
+          return;
+        }
+
         ui.sniffedPanel.style.display = "block";
         ui.sniffedList.innerHTML = "";
-        
-        response.urls.forEach(url => {
+
+        rankedUrls.slice(0, 25).forEach(url => {
           const li = document.createElement("li");
           li.style.marginBottom = "8px";
           li.style.wordBreak = "break-all";
@@ -423,14 +503,22 @@ async function resolveVideoReference(tab) {
       });
     });
 
+    const rankedUrls = rankSniffedUrls(sniffedUrls);
+
     if (sniffedUrls.length > 0) {
-      appendStatus(`Rede: ${sniffedUrls.length} URL(s) de midia detectada(s) (.m3u8/.mp4).`);
-      // We take the first sniffed URL
+      appendStatus(`Rede: ${sniffedUrls.length} URL(s) capturada(s), ${rankedUrls.length} candidata(s) apos filtro.`);
+    }
+
+    if (rankedUrls.length > 0) {
       return {
-        videoReference: sniffedUrls[0],
+        videoReference: rankedUrls[0],
         source: "network-sniffed",
-        candidatesCount: sniffedUrls.length,
+        candidatesCount: rankedUrls.length,
       };
+    }
+
+    if (sniffedUrls.length > 0) {
+      appendStatus("Rede: apenas fragmentos/ads detectados; ignorando links de baixa qualidade.");
     }
   } catch (err) {
     appendStatus(`Aviso: falha ao checar camada de rede (${err.message}).`);
