@@ -3,7 +3,12 @@
 function isMediaUrl(url, type) {
     if (type === "media") return true;
     const lowerUrl = url.toLowerCase();
-    if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".ts") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
+    if (lowerUrl.includes(".m3u8") || lowerUrl.includes(".mp4") || lowerUrl.includes(".m4a") || lowerUrl.includes("/manifest")) return true;
+    
+    // Nao retorna true mais pro .ts pra evitar explodir a lista com os pedacos
+    if (lowerUrl.split("?")[0].endsWith(".ts")) {
+        return false;
+    }
     
     // Captura toda query string suspeita
     if (lowerUrl.includes("m3u8") || lowerUrl.includes("mp4") || lowerUrl.includes("token=") || lowerUrl.includes("hash=")) {
