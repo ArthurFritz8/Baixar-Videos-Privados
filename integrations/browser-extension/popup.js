@@ -261,7 +261,10 @@ function formatDiagnosticDetail(value) {
   }
 
   const lower = clean.toLowerCase();
-  if (lower.includes("cloudflare anti-bot challenge")) {
+  if (
+    lower.includes("cloudflare anti-bot challenge") ||
+    lower.includes("source_protected_by_cloudflare_antibot_challenge")
+  ) {
     return "Fonte protegida por desafio anti-bot (Cloudflare).";
   }
 
