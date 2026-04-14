@@ -306,7 +306,7 @@ function isBlockedSniffedUrl(videoUrl) {
 
   const blockedTokens = [
     "timedtext", "subtitle", "caption", "doubleclick", "googlesyndication", "googleads",
-    "videojs.ads", "ima", "vast", "vmap", "adservice", "analytics", "tracker"
+    "videojs.ads", "vast", "vmap", "adservice"
   ];
   if (blockedTokens.some((token) => href.includes(token))) {
     return true;
@@ -347,14 +347,17 @@ function scoreSniffedUrl(videoUrl) {
 function rankSniffedUrls(urls) {
   const uniqueUrls = Array.from(new Set((urls || []).filter(Boolean).map((item) => String(item).trim())));
 
-  return uniqueUrls
+  const ranked = uniqueUrls
     .map((url) => ({
       url,
       score: scoreSniffedUrl(url),
     }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((item) => item.url);
+    .filter((item) => item.score > -1000)
+    .sort((a, b) => b.score - a.score);
+
+  // Prioriza candidatos fortes, mas nao esconde completamente os demais.
+  const strong = ranked.filter((item) => item.score > 0);
+  return (strong.length > 0 ? strong : ranked).map((item) => item.url);
 }
 
 function isLikelyDirectMediaReference(videoUrl) {
@@ -510,10 +513,31 @@ async function resolveVideoReference(tab) {
     }
 
     if (rankedUrls.length > 0) {
+      const firstCandidate = rankedUrls[0];
+      const firstScore = scoreSniffedUrl(firstCandidate);
+      if (firstScore > 0 || isLikelyDirectMediaReference(firstCandidate)) {
+        return {
+          videoReference: firstCandidate,
+          source: "network-sniffed",
+          candidatesCount: rankedUrls.length,
+        };
+      }
+
+      appendStatus("Rede: candidatos de baixa confianca; tentando fallback por DOM/iframe...");
+    }
+
+    const domCandidate = await extractVideoReferenceFromDom(tab.id);
+    if (
+      domCandidate &&
+      domCandidate.url &&
+      domCandidate.url !== tab.url &&
+      !isBlockedSniffedUrl(domCandidate.url)
+    ) {
+      appendStatus(`DOM: candidato detectado via ${domCandidate.source} (${domCandidate.candidatesCount} opcoes).`);
       return {
-        videoReference: rankedUrls[0],
-        source: "network-sniffed",
-        candidatesCount: rankedUrls.length,
+        videoReference: domCandidate.url,
+        source: "dom-fallback",
+        candidatesCount: domCandidate.candidatesCount || 1,
       };
     }
 
@@ -524,8 +548,7 @@ async function resolveVideoReference(tab) {
     appendStatus(`Aviso: falha ao checar camada de rede (${err.message}).`);
   }
 
-  // Desativado: o yt-dlp agora fara o trabalho pesado a partir da URL da pagina.
-  // Evita coletar iframes inuteis ou redirects de propaganda como midia principal.
+  // Ultimo fallback: URL da pagina.
   return { videoReference: tab.url, source: "tab-url", candidatesCount: 1 };
 }
 
@@ -660,6 +683,7 @@ async function extractVideoReferenceFromDom(tabId) {
 
             const host = (parsed.hostname || "").toLowerCase();
             const path = (parsed.pathname || "").toLowerCase();
+            const currentHost = (window.location.hostname || "").toLowerCase();
 
             if (host.includes("facebook.com") || host.includes("twitter.com") || host === "x.com" || host.endsWith(".x.com")) {
               return (
@@ -671,6 +695,20 @@ async function extractVideoReferenceFromDom(tabId) {
                 path.includes("/status/") ||
                 path.includes("/embed")
               );
+            }
+
+            if (host === currentHost || host.endsWith(`.${currentHost}`)) {
+              if (
+                lower.includes(".m3u8") ||
+                lower.includes(".mp4") ||
+                lower.includes("playlist") ||
+                lower.includes("manifest") ||
+                path.includes("/player") ||
+                path.includes("/embed") ||
+                path.includes("/stream")
+              ) {
+                return true;
+              }
             }
 
             return (

@@ -34,8 +34,14 @@ class PlatformExtractorDownloader:
         self._public_failure_message = public_failure_message
 
     def supports(self, source_url: str) -> bool:
+        if not self._enabled:
+            return False
+
         parsed = urlparse(source_url)
         host = (parsed.hostname or "").lower()
+        path = (parsed.path or "").lower()
+        query = (parsed.query or "").lower()
+        normalized_url = source_url.lower()
         if parsed.scheme.lower() not in ("http", "https"):
             return False
         if not host:
@@ -44,6 +50,20 @@ class PlatformExtractorDownloader:
         for supported_host in SUPPORTED_PLATFORM_HOSTS:
             if host == supported_host or host.endswith(f".{supported_host}"):
                 return True
+
+        # Para hosts nao catalogados, tenta extractor em URLs tipicas de player/stream.
+        if (
+            ".m3u8" in normalized_url
+            or ".mpd" in normalized_url
+            or "manifest" in normalized_url
+            or "playlist" in normalized_url
+            or path.endswith(".html")
+            or "/player" in path
+            or "/embed" in path
+            or "m3u8" in query
+        ):
+            return True
+
         return False
 
     async def download(

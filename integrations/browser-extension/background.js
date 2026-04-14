@@ -8,6 +8,58 @@ function getUrlPath(url) {
     }
 }
 
+function getHeaderValue(headers, name) {
+    if (!Array.isArray(headers)) {
+        return "";
+    }
+
+    const target = String(name || "").toLowerCase();
+    for (const header of headers) {
+        if (!header || !header.name) {
+            continue;
+        }
+        if (String(header.name).toLowerCase() === target) {
+            return String(header.value || "").toLowerCase();
+        }
+    }
+    return "";
+}
+
+function isDirectMediaContentType(contentType) {
+    const ct = String(contentType || "").toLowerCase();
+    if (!ct) {
+        return false;
+    }
+
+    return (
+        ct.includes("application/vnd.apple.mpegurl") ||
+        ct.includes("application/x-mpegurl") ||
+        ct.includes("application/mpegurl") ||
+        ct.includes("application/dash+xml") ||
+        ct.includes("video/mp4") ||
+        ct.includes("video/webm") ||
+        ct.includes("audio/mp4") ||
+        ct.includes("audio/mpeg")
+    );
+}
+
+function isBlockedContentType(contentType) {
+    const ct = String(contentType || "").toLowerCase();
+    if (!ct) {
+        return false;
+    }
+
+    return (
+        ct.includes("video/mp2t") ||
+        ct.includes("javascript") ||
+        ct.includes("application/json") ||
+        ct.includes("text/html") ||
+        ct.includes("text/css") ||
+        ct.startsWith("image/") ||
+        ct.startsWith("font/")
+    );
+}
+
 function isBlockedResourceUrl(url) {
     const lowerUrl = String(url || "").toLowerCase();
     const path = getUrlPath(url);
@@ -22,7 +74,7 @@ function isBlockedResourceUrl(url) {
 
     const blockedTokens = [
         "timedtext", "subtitle", "caption", "doubleclick", "googlesyndication", "googleads",
-        "videojs.ads", "ima", "vast", "vmap", "adservice", "analytics", "tracker"
+        "videojs.ads", "vast", "vmap", "adservice"
     ];
     if (blockedTokens.some((token) => lowerUrl.includes(token))) {
         return true;
@@ -63,6 +115,32 @@ function isMediaUrl(url, type) {
     }
 
     return false;
+}
+
+function shouldCaptureByHeaders(details) {
+    const contentType = getHeaderValue(details && details.responseHeaders, "content-type");
+    const contentDisposition = getHeaderValue(
+        details && details.responseHeaders,
+        "content-disposition"
+    );
+
+    if (isBlockedContentType(contentType)) {
+        return false;
+    }
+
+    if (isBlockedResourceUrl(details && details.url)) {
+        return false;
+    }
+
+    if (isDirectMediaContentType(contentType)) {
+        return true;
+    }
+
+    if (contentDisposition.includes("filename=") && !contentDisposition.includes(".ts")) {
+        return true;
+    }
+
+    return isMediaUrl(details && details.url, details && details.type);
 }
 
 function saveUrlForTab(tabId, url) {
@@ -111,7 +189,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 // Fallback extra pra headers
 chrome.webRequest.onHeadersReceived.addListener(
     function(details) {
-        if (isMediaUrl(details.url, details.type)) {
+        if (shouldCaptureByHeaders(details)) {
             saveUrlForTab(details.tabId, details.url);
         }
     },
